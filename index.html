@@ -1,0 +1,443 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>독일어 Lektion 1 복습 퀴즈</title>
+    <!-- Tailwind CSS CDN -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Google Fonts - Inter -->
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap" rel="stylesheet">
+    <style>
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: #f0f2f5; /* Light gray background */
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+            padding: 20px;
+            box-sizing: border-box;
+        }
+        .quiz-container {
+            background-color: #ffffff; /* White background for the quiz box */
+            border-radius: 1.5rem; /* Rounded corners */
+            box-shadow: 0 10px 25px rgba(0, 0, 0, 0.1); /* Soft shadow */
+            padding: 2.5rem; /* Ample padding */
+            width: 100%;
+            max-width: 600px; /* Max width for better readability on large screens */
+            display: flex;
+            flex-direction: column;
+            gap: 1.5rem; /* Space between elements */
+        }
+        .option-button {
+            background-color: #e2e8f0; /* Light blue-gray for options */
+            color: #334155; /* Dark text for options */
+            padding: 1rem 1.5rem;
+            border-radius: 0.75rem; /* Slightly less rounded than container */
+            text-align: left;
+            transition: all 0.2s ease-in-out;
+            cursor: pointer;
+            font-weight: 500;
+        }
+        .option-button:hover:not(.selected):not(.correct):not(.incorrect) {
+            background-color: #cbd5e1; /* Darker on hover */
+        }
+        .option-button.selected {
+            border: 2px solid #3b82f6; /* Blue border when selected */
+        }
+        .option-button.correct {
+            background-color: #d1fae5; /* Light green for correct answer */
+            border: 2px solid #10b981; /* Green border */
+            color: #065f46; /* Dark green text */
+        }
+        .option-button.incorrect {
+            background-color: #fee2e2; /* Light red for incorrect answer */
+            border: 2px solid #ef4444; /* Red border */
+            color: #991b1b; /* Dark red text */
+        }
+        .feedback-message {
+            padding: 0.75rem 1rem;
+            border-radius: 0.5rem;
+            font-weight: 600;
+            text-align: center;
+        }
+        .feedback-correct {
+            background-color: #d1fae5;
+            color: #065f46;
+        }
+        .feedback-incorrect {
+            background-color: #fee2e2;
+            color: #991b1b;
+        }
+        .main-button {
+            background-color: #3b82f6; /* Blue for main buttons */
+            color: #ffffff;
+            padding: 1rem 2rem;
+            border-radius: 0.75rem;
+            font-weight: 700;
+            cursor: pointer;
+            transition: background-color 0.2s ease-in-out;
+            text-align: center;
+        }
+        .main-button:hover {
+            background-color: #2563eb; /* Darker blue on hover */
+        }
+        .hidden {
+            display: none;
+        }
+    </style>
+</head>
+<body>
+    <div class="quiz-container">
+        <h1 id="quiz-title" class="text-3xl font-bold text-gray-800 text-center mb-4">독일어 Lektion 1 복습 퀴즈</h1>
+
+        <!-- Start Screen -->
+        <div id="start-screen" class="flex flex-col items-center gap-6">
+            <p class="text-lg text-gray-600 text-center">독일어 Lektion 1 내용을 복습할 준비가 되셨나요?</p>
+            <button id="start-button" class="main-button w-full">퀴즈 시작하기</button>
+        </div>
+
+        <!-- Quiz Screen -->
+        <div id="quiz-screen" class="hidden flex-col gap-6">
+            <p id="question-number" class="text-sm text-gray-500 font-medium text-right"></p>
+            <h2 id="question-text" class="text-xl font-semibold text-gray-900 leading-relaxed"></h2>
+            <div id="options-container" class="grid grid-cols-1 gap-3">
+                <!-- Options will be dynamically loaded here -->
+            </div>
+            <div id="feedback-container" class="hidden">
+                <p id="feedback-message" class="feedback-message"></p>
+                <p id="rationale-message" class="text-sm text-gray-600 mt-2"></p>
+            </div>
+            <button id="next-button" class="main-button w-full hidden">다음 문제</button>
+        </div>
+
+        <!-- Result Screen -->
+        <div id="result-screen" class="hidden flex-col items-center gap-6">
+            <h2 class="text-2xl font-bold text-gray-800 text-center">퀴즈 결과</h2>
+            <p id="score-text" class="text-4xl font-extrabold text-blue-600"></p>
+            <p class="text-lg text-gray-700 text-center">수고하셨습니다! 다시 한번 도전해 볼까요?</p>
+            <button id="restart-button" class="main-button w-full">다시 시작하기</button>
+        </div>
+    </div>
+
+    <script>
+        // 퀴즈 데이터 (이전 대화에서 제공된 JSON 데이터)
+        const quizData = {
+            "questions": [
+                {
+                    "question": "다음 중 당신(격식)을 나타내는 인칭대명사는 무엇입니까?",
+                    "answerOptions": [
+                        {"text": "ich", "rationale": "'ich'는 '나'를 의미합니다.", "isCorrect": false},
+                        {"text": "du", "rationale": "'du'는 '너'(비격식)를 의미합니다.", "isCorrect": false},
+                        {"text": "er/sie", "rationale": "'er/sie'는 '그/그녀'를 의미합니다.", "isCorrect": false},
+                        {"text": "Sie", "rationale": "'Sie'는 '당신'(격식)을 의미하며 항상 대문자로 시작합니다.", "isCorrect": true}
+                    ]
+                },
+                {
+                    "question": "아침 인사를 독일어로 어떻게 표현할까요?",
+                    "answerOptions": [
+                        {"text": "Guten Abend", "rationale": "'Guten Abend'는 '좋은 저녁입니다'라는 의미입니다.", "isCorrect": false},
+                        {"text": "Hallo", "rationale": "'Hallo'는 '안녕'(비격식/중립)이라는 의미입니다.", "isCorrect": false},
+                        {"text": "Guten Morgen", "rationale": "'Guten Morgen'은 '좋은 아침입니다'(격식/중립)라는 의미입니다.", "isCorrect": true},
+                        {"text": "Guten Tag", "rationale": "'Guten Tag'는 '안녕하세요, 좋은 날입니다'(격식)라는 의미입니다.", "isCorrect": false}
+                    ]
+                },
+                {
+                    "question": "빈칸에 알맞은 동사 변형을 고르세요: Ich ______ Müller.",
+                    "answerOptions": [
+                        {"text": "heißt", "rationale": "'heißt'는 'du' 또는 'er/sie'와 함께 사용되는 형태입니다.", "isCorrect": false},
+                        {"text": "heiße", "rationale": "'Ich' 주어와 함께 'heißen' 동사는 'heiße'로 변형됩니다.", "isCorrect": true},
+                        {"text": "heißen", "rationale": "'heißen'은 원형 또는 'Sie' 주어와 함께 사용됩니다.", "isCorrect": false},
+                        {"text": "heißt", "rationale": "'heißt'는 'du' 또는 'er/sie'와 함께 사용되는 형태입니다.", "isCorrect": false}
+                    ]
+                },
+                {
+                    "question": "비격식적으로 상대방의 이름을 묻는 질문은 무엇입니까?",
+                    "answerOptions": [
+                        {"text": "Wie heißen Sie?", "rationale": "'Wie heißen Sie?'는 격식적인 표현입니다.", "isCorrect": false},
+                        {"text": "Wie heißt du?", "rationale": "'Wie heißt du?'는 비격식적으로 이름을 묻는 올바른 표현입니다.", "isCorrect": true},
+                        {"text": "Wer sind Sie?", "rationale": "'Wer sind Sie?'는 '당신은 누구입니까?'라는 의미로 이름 묻는 표현과는 다릅니다.", "isCorrect": false},
+                        {"text": "Was ist dein Name?", "rationale": "'Was ist dein Name?'도 이름을 묻는 표현이지만, 'Wie heißt du?'가 더 일반적이고 자연스러운 질문입니다.", "isCorrect": false}
+                    ]
+                },
+                {
+                    "question": "자신의 이름이 홍길동이라고 답할 때 사용할 수 없는 표현은 무엇입니까?",
+                    "answerOptions": [
+                        {"text": "Ich heiße Hong Gildong.", "rationale": "'Ich heiße...'는 자신의 이름을 말할 때 올바른 표현입니다.", "isCorrect": false},
+                        {"text": "Ich bin Hong Gildong.", "rationale": "'Ich bin...'은 자신의 이름을 말할 때 올바른 표현입니다.", "isCorrect": false},
+                        {"text": "Mein Name ist Hong Gildong.", "rationale": "'Mein Name ist...'는 자신의 이름을 말할 때 올바른 표현입니다.", "isCorrect": false},
+                        {"text": "Sie heißen Hong Gildong.", "rationale": "'Sie heißen...'은 '당신은 홍길동이라고 불립니다'라는 의미로, 자신을 소개할 때는 사용하지 않습니다.", "isCorrect": true}
+                    ]
+                },
+                {
+                    "question": "다음 중 '스페인'을 독일어로 올바르게 표기한 것은 무엇입니까?",
+                    "answerOptions": [
+                        {"text": "Deutchland", "rationale": "'Deutchland'는 '독일'을 의미합니다.", "isCorrect": false},
+                        {"text": "Japan", "rationale": "'Japan'은 '일본'을 의미합니다.", "isCorrect": false},
+                        {"text": "Spanien", "rationale": "'Spanien'은 '스페인'을 올바르게 표기한 것입니다.", "isCorrect": true},
+                        {"text": "Korea", "rationale": "'Korea'는 '한국'을 의미합니다.", "isCorrect": false}
+                    ]
+                },
+                {
+                    "question": "격식적으로 상대방의 출신지를 묻는 질문은 무엇입니까?",
+                    "answerOptions": [
+                        {"text": "Woher kommst du?", "rationale": "'Woher kommst du?'는 비격식적인 표현입니다.", "isCorrect": false},
+                        {"text": "Wo wohnen Sie?", "rationale": "'Wo wohnen Sie?'는 '어디에 거주하십니까?'라는 의미로 출신지를 묻는 표현과는 다릅니다.", "isCorrect": false},
+                        {"text": "Woher kommen Sie?", "rationale": "'Woher kommen Sie?'는 격식적으로 출신지를 묻는 올바른 표현입니다.", "isCorrect": true},
+                        {"text": "Was machst du?", "rationale": "'Was machst du?'는 '무엇을 하니?'라는 의미로 출신지를 묻는 표현과는 다릅니다.", "isCorrect": false}
+                    ]
+                },
+                {
+                    "question": "나는 미국 출신입니다. 를 독일어로 올바르게 표현한 것은 무엇입니까?",
+                    "answerOptions": [
+                        {"text": "Ich komme aus der USA.", "rationale": "USA는 복수형 명사이므로 'aus den USA'로 표현해야 합니다.", "isCorrect": false},
+                        {"text": "Ich komme aus den USA.", "rationale": "국가 이름 'die USA'가 복수형이므로 'aus den USA'가 올바른 표현입니다.", "isCorrect": true},
+                        {"text": "Ich komme aus die USA.", "rationale": "'aus'는 3격 지배 전치사이므로 'die USA'가 아니라 3격 형태가 와야 합니다.", "isCorrect": false},
+                        {"text": "Ich komme aus USA.", "rationale": "국가 이름에 정관사가 붙는 경우 정관사를 함께 사용해야 합니다.", "isCorrect": false}
+                    ]
+                },
+                {
+                    "question": "다음 중 '전화번호'를 독일어로 올바르게 표기한 것은 무엇입니까?",
+                    "answerOptions": [
+                        {"text": "die Adresse", "rationale": "'die Adresse'는 '주소'를 의미합니다.", "isCorrect": false},
+                        {"text": "der Name", "rationale": "'der Name'는 '이름'을 의미합니다.", "isCorrect": false},
+                        {"text": "die Postleitzahl", "rationale": "'die Postleitzahl'은 '우편번호'를 의미합니다.", "isCorrect": false},
+                        {"text": "die Telefonnummer", "rationale": "'die Telefonnummer'는 '전화번호'를 올바르게 표기한 것입니다.", "isCorrect": true}
+                    ]
+                },
+                {
+                    "question": "홍길동 씨(남성, 성이 홍)를 격식적으로 부를 때 올바른 표현은 무엇입니까?",
+                    "answerOptions": [
+                        {"text": "Gildong!", "rationale": "'Gildong!'은 비격식적인 표현입니다.", "isCorrect": false},
+                        {"text": "Frau Hong!", "rationale": "'Frau'는 여성을 지칭할 때 사용합니다.", "isCorrect": false},
+                        {"text": "Herr Hong!", "rationale": "남성을 격식적으로 부를 때는 'Herr'와 성을 함께 사용합니다.", "isCorrect": true},
+                        {"text": "Hallo Herr Hong!", "rationale": "이것은 인사 표현이며, 단순히 부를 때는 'Herr Hong!'이 적절합니다.", "isCorrect": false}
+                    ]
+                },
+                {
+                    "question": "격식적으로 상대방의 주소를 묻는 질문은 무엇입니까?",
+                    "answerOptions": [
+                        {"text": "Wo wohnst du?", "rationale": "'Wo wohnst du?'는 비격식적인 표현입니다.", "isCorrect": false},
+                        {"text": "Wie ist deine Adresse?", "rationale": "'Wie ist deine Adresse?'는 비격식적인 표현입니다.", "isCorrect": false},
+                        {"text": "Wie ist Ihre Adresse?", "rationale": "'Wie ist Ihre Adresse?'는 격식적으로 주소를 묻는 올바른 표현입니다.", "isCorrect": true},
+                        {"text": "Was ist Ihre Adresse?", "rationale": "'Was ist Ihre Adresse?'도 문법적으로는 가능하지만, 'Wie ist Ihre Adresse?'가 더 자연스러운 표현입니다.", "isCorrect": false}
+                    ]
+                },
+                {
+                    "question": "다음 중 '당신의(격식, 여성명사)'를 올바르게 표현한 것은 무엇입니까?",
+                    "answerOptions": [
+                        {"text": "Ihr", "rationale": "'Ihr'는 남성명사 또는 중성명사 앞에 오는 '당신의'(격식) 표현입니다.", "isCorrect": false},
+                        {"text": "Ihre", "rationale": "'Ihre'는 여성명사 앞에 오는 '당신의'(격식) 올바른 표현입니다.", "isCorrect": true},
+                        {"text": "dein", "rationale": "'dein'은 비격식 '너의'를 의미하며 남성명사 또는 중성명사 앞에 옵니다.", "isCorrect": false},
+                        {"text": "deine", "rationale": "'deine'는 비격식 '너의'를 의미하며 여성명사 앞에 옵니다.", "isCorrect": false}
+                    ]
+                },
+                {
+                    "question": "숫자 '3'을 독일어로 올바르게 표기한 것은 무엇입습니까?",
+                    "answerOptions": [
+                        {"text": "eins", "rationale": "'eins'는 '1'을 의미합니다.", "isCorrect": false},
+                        {"text": "zwei", "rationale": "'zwei'는 '2'를 의미합니다.", "isCorrect": false},
+                        {"text": "drei", "rationale": "'drei'는 '3'을 올바르게 표기한 것입니다.", "isCorrect": true},
+                        {"text": "vier", "rationale": "'vier'는 '4'를 의미합니다.", "isCorrect": false}
+                    ]
+                },
+                {
+                    "question": "다음 중 '사진'을 독일어로 올바르게 표기한 것은 무엇입니까?",
+                    "answerOptions": [
+                        {"text": "der Ort", "rationale": "'der Ort'는 '장소'를 의미합니다.", "isCorrect": false},
+                        {"text": "die Adresse", "rationale": "'die Adresse'는 '주소'를 의미합니다.", "isCorrect": false},
+                        {"text": "das Foto", "rationale": "'das Foto'는 '사진'을 올바르게 표기한 것입니다.", "isCorrect": true},
+                        {"text": "der Name", "rationale": "'der Name'는 '이름'을 의미합니다.", "isCorrect": false}
+                    ]
+                },
+                {
+                    "question": "빈칸에 알맞은 동사 변형을 고르세요: Du ______ Student.",
+                    "answerOptions": [
+                        {"text": "bin", "rationale": "'bin'은 'Ich' 주어와 함께 사용됩니다.", "isCorrect": false},
+                        {"text": "sind", "rationale": "'sind'는 'Sie' 주어와 함께 사용됩니다.", "isCorrect": false},
+                        {"text": "ist", "rationale": "'ist'는 'er/sie' 주어와 함께 사용됩니다.", "isCorrect": false},
+                        {"text": "bist", "rationale": "'Du' 주어와 함께 'sein' 동사는 'bist'로 변형됩니다. 'sein'은 불규칙동사입니다.", "isCorrect": true}
+                    ]
+                },
+                {
+                    "question": "독일어 기본 규칙 중 옳지 않은 것은 무엇입니까?",
+                    "answerOptions": [
+                        {"text": "문장은 항상 대문자로 시작한다.", "rationale": "이것은 독일어의 올바른 규칙입니다.", "isCorrect": false},
+                        {"text": "명사는 항상 대문자로 시작한다.", "rationale": "이것은 독일어의 올바른 규칙입니다.", "isCorrect": false},
+                        {"text": "명사의 성을 항상 함께 외워야 한다.", "rationale": "이것은 독일어의 올바른 규칙입니다.", "isCorrect": false},
+                        {"text": "존칭 'Sie'는 항상 소문자로 쓴다.", "rationale": "존칭 'Sie'는 항상 대문자로 씁니다. 이것이 옳지 않은 설명입니다.", "isCorrect": true}
+                    ]
+                },
+                {
+                    "question": "'사진'을 나타내는 독일어 명사 'Foto'의 올바른 성은 무엇입니까?",
+                    "answerOptions": [
+                        {"text": "der", "rationale": "'der'는 남성명사 앞에 붙는 정관사입니다.", "isCorrect": false},
+                        {"text": "das", "rationale": "'Foto'는 중성명사이므로 'das Foto'가 올바릅니다.", "isCorrect": true},
+                        {"text": "die", "rationale": "'die'는 여성명사 또는 복수명사 앞에 붙는 정관사입니다.", "isCorrect": false},
+                        {"text": "kein Artikel", "rationale": "독일어 명사에는 대부분 정관사가 붙습니다.", "isCorrect": false}
+                    ]
+                },
+                {
+                    "question": "비격식적으로 '잘 가'라는 작별 인사는 무엇입니까?",
+                    "answerOptions": [
+                        {"text": "Auf Wiedersehen", "rationale": "'Auf Wiedersehen'은 격식적인 작별 인사입니다.", "isCorrect": false},
+                        {"text": "Guten Tag", "rationale": "'Guten Tag'는 '안녕하세요'라는 인사입니다.", "isCorrect": false},
+                        {"text": "Tschüs", "rationale": "'Tschüs'는 비격식적으로 '잘 가'라는 의미의 올바른 작별 인사입니다.", "isCorrect": true},
+                        {"text": "Guten Abend", "rationale": "'Guten Abend'는 '좋은 저녁입니다'라는 인사입니다.", "isCorrect": false}
+                    ]
+                },
+                {
+                    "question": "빈칸에 알맞은 동사 변형을 고르세요: Wo ______ Sie?",
+                    "answerOptions": [
+                        {"text": "wohnst", "rationale": "'wohnst'는 'du' 주어와 함께 사용됩니다.", "isCorrect": false},
+                        {"text": "wohnt", "rationale": "'wohnt'는 'er/sie' 주어와 함께 사용됩니다.", "isCorrect": false},
+                        {"text": "wohne", "rationale": "'wohne'는 'Ich' 주어와 함께 사용됩니다.", "isCorrect": false},
+                        {"text": "wohnen", "rationale": "'Sie' 주어와 함께 'wohnen' 동사는 원형과 동일한 'wohnen'으로 변형됩니다.", "isCorrect": true}
+                    ]
+                },
+                {
+                    "question": "다음 문장을 올바르게 완성하세요: Ich wohne ______ Seoul, Südkorea.",
+                    "answerOptions": [
+                        {"text": "in", "rationale": "'wohnen' 동사는 주로 'in'과 함께 사용되지만, 출신지를 말할 때는 다른 전치사를 사용합니다.", "isCorrect": false},
+                        {"text": "aus", "rationale": "도시나 국가에서 왔다고 할 때 'aus' 전치사를 사용합니다. 'Ich komme aus...'와 유사한 맥락입니다.", "isCorrect": true},
+                        {"text": "von", "rationale": "'von'은 '~로부터'라는 의미이지만, 출신지를 말할 때는 'aus'를 사용합니다.", "isCorrect": false},
+                        {"text": "nach", "rationale": "'nach'는 '~로(방향)'를 의미하며 주로 이동 동사와 함께 사용됩니다.", "isCorrect": false}
+                    ]
+                }
+            ]
+        };
+
+        // DOM 요소 가져오기
+        const startScreen = document.getElementById('start-screen');
+        const quizScreen = document.getElementById('quiz-screen');
+        const resultScreen = document.getElementById('result-screen');
+        const startButton = document.getElementById('start-button');
+        const questionNumberElement = document.getElementById('question-number');
+        const questionTextElement = document.getElementById('question-text');
+        const optionsContainer = document.getElementById('options-container');
+        const feedbackContainer = document.getElementById('feedback-container');
+        const feedbackMessageElement = document.getElementById('feedback-message');
+        const rationaleMessageElement = document.getElementById('rationale-message');
+        const nextButton = document.getElementById('next-button');
+        const scoreTextElement = document.getElementById('score-text');
+        const restartButton = document.getElementById('restart-button');
+
+        let currentQuestionIndex = 0; // 현재 문제 인덱스
+        let score = 0; // 점수
+        let selectedOption = null; // 사용자가 선택한 옵션
+
+        // 퀴즈 시작 함수
+        function startQuiz() {
+            startScreen.classList.add('hidden'); // 시작 화면 숨기기
+            quizScreen.classList.remove('hidden'); // 퀴즈 화면 보이기
+            currentQuestionIndex = 0; // 문제 인덱스 초기화
+            score = 0; // 점수 초기화
+            loadQuestion(); // 첫 번째 문제 로드
+        }
+
+        // 문제 로드 및 표시 함수
+        function loadQuestion() {
+            resetQuizState(); // 퀴즈 상태 초기화 (선택, 피드백 숨기기 등)
+            const currentQuestion = quizData.questions[currentQuestionIndex]; // 현재 문제 가져오기
+
+            questionNumberElement.textContent = `문제 ${currentQuestionIndex + 1} / ${quizData.questions.length}`; // 문제 번호 표시
+            questionTextElement.textContent = currentQuestion.question; // 문제 텍스트 표시
+            optionsContainer.innerHTML = ''; // 옵션 컨테이너 비우기
+
+            // 각 옵션 버튼 생성 및 추가
+            currentQuestion.answerOptions.forEach((option, index) => {
+                const button = document.createElement('button');
+                button.textContent = option.text;
+                button.classList.add('option-button', 'w-full'); // Tailwind CSS 클래스 추가
+                button.dataset.index = index; // 옵션 인덱스 저장
+                button.addEventListener('click', () => selectAnswer(button, option.isCorrect, option.rationale)); // 클릭 이벤트 리스너 추가
+                optionsContainer.appendChild(button);
+            });
+        }
+
+        // 퀴즈 상태 초기화 함수
+        function resetQuizState() {
+            selectedOption = null; // 선택된 옵션 초기화
+            feedbackContainer.classList.add('hidden'); // 피드백 컨테이너 숨기기
+            nextButton.classList.add('hidden'); // 다음 문제 버튼 숨기기
+            // 모든 옵션 버튼의 스타일 초기화
+            Array.from(optionsContainer.children).forEach(button => {
+                button.classList.remove('selected', 'correct', 'incorrect');
+                button.disabled = false; // 버튼 활성화
+            });
+        }
+
+        // 답변 선택 함수
+        function selectAnswer(button, isCorrect, rationale) {
+            if (selectedOption !== null) return; // 이미 선택된 경우 중복 선택 방지
+
+            selectedOption = button; // 선택된 옵션 저장
+            button.classList.add('selected'); // 선택된 옵션에 스타일 적용
+
+            // 모든 옵션 버튼 비활성화
+            Array.from(optionsContainer.children).forEach(btn => btn.disabled = true);
+
+            // 정답/오답 표시 및 피드백 제공
+            if (isCorrect) {
+                button.classList.add('correct');
+                feedbackMessageElement.textContent = '정답입니다!';
+                feedbackMessageElement.classList.remove('feedback-incorrect');
+                feedbackMessageElement.classList.add('feedback-correct');
+                score++; // 점수 증가
+            } else {
+                button.classList.add('incorrect');
+                feedbackMessageElement.textContent = '오답입니다.';
+                feedbackMessageElement.classList.remove('feedback-correct');
+                feedbackMessageElement.classList.add('feedback-incorrect');
+                // 정답 표시
+                Array.from(optionsContainer.children).forEach(btn => {
+                    const optionIndex = parseInt(btn.dataset.index);
+                    if (quizData.questions[currentQuestionIndex].answerOptions[optionIndex].isCorrect) {
+                        btn.classList.add('correct');
+                    }
+                });
+            }
+
+            // 해설 표시 (있을 경우)
+            if (rationale) {
+                rationaleMessageElement.textContent = rationale;
+            } else {
+                rationaleMessageElement.textContent = '';
+            }
+
+            feedbackContainer.classList.remove('hidden'); // 피드백 컨테이너 보이기
+            nextButton.classList.remove('hidden'); // 다음 문제 버튼 보이기
+        }
+
+        // 다음 문제로 이동 또는 결과 표시 함수
+        function showNextQuestion() {
+            currentQuestionIndex++; // 다음 문제로 인덱스 증가
+            if (currentQuestionIndex < quizData.questions.length) {
+                loadQuestion(); // 다음 문제 로드
+            } else {
+                showResults(); // 모든 문제 풀이 완료 시 결과 표시
+            }
+        }
+
+        // 결과 화면 표시 함수
+        function showResults() {
+            quizScreen.classList.add('hidden'); // 퀴즈 화면 숨기기
+            resultScreen.classList.remove('hidden'); // 결과 화면 보이기
+            scoreTextElement.textContent = `${score} / ${quizData.questions.length} 문제 정답!`; // 점수 표시
+        }
+
+        // 퀴즈 다시 시작 함수
+        function restartQuiz() {
+            resultScreen.classList.add('hidden'); // 결과 화면 숨기기
+            startScreen.classList.remove('hidden'); // 시작 화면 보이기
+            // startQuiz()에서 모든 초기화가 이루어지므로 여기서는 화면 전환만 담당
+        }
+
+        // 이벤트 리스너 연결
+        startButton.addEventListener('click', startQuiz); // 시작 버튼 클릭 시 퀴즈 시작
+        nextButton.addEventListener('click', showNextQuestion); // 다음 문제 버튼 클릭 시 다음 문제로 이동
+        restartButton.addEventListener('click', restartQuiz); // 다시 시작 버튼 클릭 시 퀴즈 재시작
+    </script>
+</body>
+</html>
