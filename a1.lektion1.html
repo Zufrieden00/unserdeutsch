@@ -1,0 +1,451 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>[A1] Lektion1 통과 시험</title>
+    <!-- Tailwind CSS CDN -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Google Fonts - Inter -->
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap" rel="stylesheet">
+    <style>
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: #f0f2f5; /* Light gray background */
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+            padding: 20px;
+            box-sizing: border-box;
+        }
+        .quiz-container {
+            background-color: #ffffff; /* White background for the quiz box */
+            border-radius: 1.5rem; /* Rounded corners */
+            box-shadow: 0 10px 25px rgba(0, 0, 0, 0.1); /* Soft shadow */
+            padding: 2.5rem; /* Ample padding */
+            width: 100%;
+            max-width: 600px; /* Max width for better readability on large screens */
+            display: flex;
+            flex-direction: column;
+            gap: 1.5rem; /* Space between elements */
+        }
+        .option-button {
+            background-color: #e2e8f0; /* Light blue-gray for options */
+            color: #334155; /* Dark text for options */
+            padding: 1rem 1.5rem;
+            border-radius: 0.75rem; /* Slightly less rounded than container */
+            text-align: left;
+            transition: all 0.2s ease-in-out;
+            cursor: pointer;
+            font-weight: 500;
+        }
+        .option-button:hover:not(.selected):not(.correct):not(.incorrect) {
+            background-color: #cbd5e1; /* Darker on hover */
+        }
+        .option-button.selected {
+            border: 2px solid #3b82f6; /* Blue border when selected */
+        }
+        .option-button.correct {
+            background-color: #d1fae5; /* Light green for correct answer */
+            border: 2px solid #10b981; /* Green border */
+            color: #065f46; /* Dark green text */
+        }
+        .option-button.incorrect {
+            background-color: #fee2e2; /* Light red for incorrect answer */
+            border: 2px solid #ef4444; /* Red border */
+            color: #991b1b; /* Dark red text */
+        }
+        .feedback-message {
+            padding: 0.75rem 1rem;
+            border-radius: 0.5rem;
+            font-weight: 600;
+            text-align: center;
+        }
+        .feedback-correct {
+            background-color: #d1fae5;
+            color: #065f46;
+        }
+        .feedback-incorrect {
+            background-color: #fee2e2;
+            color: #991b1b;
+        }
+        .main-button {
+            background-color: #3b82f6; /* Blue for main buttons */
+            color: #ffffff;
+            padding: 1rem 2rem;
+            border-radius: 0.75rem;
+            font-weight: 700;
+            cursor: pointer;
+            transition: background-color 0.2s ease-in-out;
+            text-align: center;
+        }
+        .main-button:hover {
+            background-color: #2563eb; /* Darker blue on hover */
+        }
+        .hidden {
+            display: none;
+        }
+        /* AI 채점 관련 스피너 스타일은 더 이상 필요 없지만, 혹시 모를 경우를 대비해 남겨둡니다. */
+        .loading-spinner {
+            border: 4px solid rgba(0, 0, 0, 0.1);
+            border-left-color: #3b82f6;
+            border-radius: 50%;
+            width: 24px;
+            height: 24px;
+            animation: spin 1s linear infinite;
+            display: inline-block;
+            vertical-align: middle;
+            margin-left: 10px;
+        }
+        @keyframes spin {
+            to { transform: rotate(360deg); }
+        }
+    </style>
+</head>
+<body>
+    <div class="quiz-container">
+        <!-- Start Screen -->
+        <div id="start-screen" class="flex flex-col items-center gap-0"> <!-- gap-0으로 공백 제거 -->
+            <h1 id="quiz-title" class="text-3xl font-bold text-gray-800 text-center mb-0"> <!-- mb-0으로 h1 아래 공백 제거 -->
+                [A1] Lektion1 통과 시험
+            </h1>
+            <h2 class="text-xl font-semibold text-gray-700 text-center mt-0 mb-8">Guten Tag! Ich heiße ... .</h2> <!-- mb-8로 p와의 간격 확보 -->
+            <p class="text-lg text-gray-600 text-center mt-0">준비되셨나요?</p> <!-- mt-0으로 p 위 공백 제거 -->
+            <button id="start-button" class="main-button w-full mt-6">퀴즈 시작하기</button> <!-- 버튼 위 간격 확보 -->
+        </div>
+
+        <!-- Quiz Screen -->
+        <div id="quiz-screen" class="hidden flex-col gap-6">
+            <p id="question-number" class="text-sm text-gray-500 font-medium text-right"></p>
+            <h2 id="question-text" class="text-xl font-semibold text-gray-900 leading-relaxed"></h2>
+            <div id="options-container" class="grid grid-cols-1 gap-3">
+                <!-- Options will be dynamically loaded here for multiple-choice questions -->
+            </div>
+            <div id="subjective-input-container" class="hidden flex flex-col gap-3">
+                <input type="text" id="subjective-answer-input" class="p-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500" placeholder="여기에 답을 입력하세요">
+                <div class="flex gap-2">
+                    <button id="submit-subjective-button" class="main-button flex-1">제출하기</button>
+                    <!-- AI로 채점하기 버튼 제거됨 -->
+                </div>
+            </div>
+            <div id="feedback-container" class="hidden">
+                <p id="feedback-message" class="feedback-message"></p>
+                <p id="rationale-message" class="text-sm text-gray-600 mt-2"></p>
+            </div>
+            <button id="next-button" class="main-button w-full hidden">다음 문제</button>
+        </div>
+
+        <!-- Result Screen -->
+        <div id="result-screen" class="hidden flex-col items-center gap-6">
+            <h2 class="text-2xl font-bold text-gray-800 text-center">퀴즈 결과</h2>
+            <p id="score-text" class="text-4xl font-extrabold text-blue-600"></p>
+            <p id="pass-fail-message" class="text-2xl font-bold mt-4"></p> <!-- 합격/불합격 메시지 추가 -->
+            <p class="text-lg text-gray-700 text-center">수고하셨습니다! 다시 한번 도전해 볼까요?</p>
+            <button id="restart-button" class="main-button w-full">다시 시작하기</button>
+        </div>
+    </div>
+
+    <script>
+        // 퀴즈 데이터 (원본)
+        const originalQuizData = {
+            "questions": [
+                {
+                    "question": "\"저는 Anna입니다.\"를 독일어로 쓰세요.",
+                    "questionType": "subjective",
+                    "correctAnswers": ["Ich heiße Anna.", "Ich bin Anna.", "Mein Name ist Anna."],
+                    "rationale": "'저는 Anna입니다.'는 독일어로 'Ich heiße Anna.', 'Ich bin Anna.', 또는 'Mein Name ist Anna.'입니다."
+                },
+                {
+                    "question": "\"당신은 어디에서 오셨습니까?\"를 독일어로 쓰세요.",
+                    "questionType": "subjective",
+                    "correctAnswers": ["Woher kommen Sie?"],
+                    "rationale": "'당신은 어디에서 오셨습니까?'는 독일어로 'Woher kommen Sie?'입니다."
+                },
+                {
+                    "question": "\"그는 베를린에서 살아요.\"를 독일어로 쓰세요(Berlin)",
+                    "questionType": "subjective",
+                    "correctAnswers": ["Er wohnt in Berlin."],
+                    "rationale": "'그는 베를린에서 살아요.'는 독일어로 'Er wohnt in Berlin.'입니다."
+                },
+                {
+                    "question": "\"안녕하세요/좋은 날입니다\"(격식)을 독일어 문장으로 쓰세요.",
+                    "questionType": "subjective",
+                    "correctAnswers": ["Guten Tag!"],
+                    "rationale": "'안녕하세요/좋은 날입니다'(격식)는 독일어로 'Guten Tag!'입니다."
+                },
+                {
+                    "question": "\"나는 스페인 출신입니다.\"를 독일어 문장으로 쓰세요.",
+                    "questionType": "subjective",
+                    "correctAnswers": ["Ich komme aus Spanien."],
+                    "rationale": "'나는 스페인 출신입니다.'는 독일어로 'Ich komme aus Spanien.'입니다."
+                },
+                {
+                    "question": "\"당신의 전화번호는 무엇입니까?\"(격식)를 독일어 문장으로 쓰세요.",
+                    "questionType": "subjective",
+                    "correctAnswers": ["Wie ist Ihre Telefonnummer?"],
+                    "rationale": "'당신의 전화번호는 무엇입니까?'(격식)는 독일어로 'Wie ist Ihre Telefonnummer?'입니다."
+                },
+                {
+                    "question": "\"그는 일본 출신입니다.\"를 독일어 문장으로 쓰세요.",
+                    "questionType": "subjective",
+                    "correctAnswers": ["Er kommt aus Japan."],
+                    "rationale": "'그녀는 의사입니다.'는 독일어로 'Sie ist Ärztin.'입니다."
+                },
+                {
+                    "question": "\"실례합니다/죄송합니다.\"를 독일어 문장으로 쓰세요.",
+                    "questionType": "subjective",
+                    "correctAnswers": ["Entschuldigung!"],
+                    "rationale": "'실례합니다/죄송합니다.'는 독일어로 'Entschuldigung!'입니다."
+                },
+                {
+                    "question": "\"그녀는 Lisa입니다.\"를 독일어로 쓰세요.",
+                    "questionType": "subjective",
+                    "correctAnswers": ["Sie heißt Lisa.", "Sie ist Lisa."],
+                    "rationale": "'그녀는 Lisa입니다.'는 독일어로 'Sie heißt Lisa.' 또는 'Sie ist Lisa.'입니다."
+                },
+                {
+                    "question": "\"그녀는 독일 출신이에요\"를 독일어로 쓰세요.",
+                    "questionType": "subjective",
+                    "correctAnswers": ["Sie kommt aus Deutschland."],
+                    "rationale": "'그녀는 독일 출신이에요'는 독일어로 'Sie kommt aus Deutschland.'입니다."
+                },
+                {
+                    "question": "독일어로 '환영합니다!' 문장을 쓰세요.",
+                    "questionType": "subjective",
+                    "correctAnswers": ["Herzlich willkommen!"],
+                    "rationale": "'환영합니다!'는 독일어로 'Herzlich willkommen!'입니다."
+                },
+                {
+                    "question": "독일어로 '안녕' (비격식/중립)을 문장으로 쓰세요.",
+                    "questionType": "subjective",
+                    "correctAnswers": ["Hallo!"],
+                    "rationale": "'안녕' (비격식/중립)은 독일어로 'Hallo!'입니다."
+                },
+                {
+                    "question": "독일어로 \"나는 한국 출신입니다.\"를 쓰세요.",
+                    "questionType": "subjective",
+                    "correctAnswers": ["Ich komme aus Südkorea.", "Ich komme aus Korea."],
+                    "rationale": "'나는 한국 출신입니다.'는 독일어로 'Ich komme aus Südkorea.' 또는 'Ich komme aus Korea.'입니다."
+                },
+                {
+                    "question": "독일어로 \"당신의 이름은 무엇입니까?\" (격식) 문장을 쓰세요.",
+                    "questionType": "subjective",
+                    "correctAnswers": ["Wie heißen Sie?"],
+                    "rationale": "'당신의 이름은 무엇입니까?' (격식)는 독일어로 'Wie heißen Sie?'입니다."
+                },
+                {
+                    "question": "독일어로 \"저는 서울에 삽니다.\" 문장을 쓰세요.",
+                    "questionType": "subjective",
+                    "correctAnswers": ["Ich wohne in Seoul."],
+                    "rationale": "'저는 서울에 삽니다.'는 독일어로 'Ich wohne in Seoul.'입니다."
+                },
+                {
+                    "question": "독일어로 \"전화번호\"를 사용하여 \"나의 전화번호는 123456789입니다.\" 문장을 쓰세요.",
+                    "questionType": "subjective",
+                    "correctAnswers": ["Meine Telefonnummer ist 123456789."],
+                    "rationale": "'나의 전화번호는 123456789입니다.'는 독일어로 'Meine Telefonnummer ist 123456789.'입니다."
+                },
+                {
+                    "question": "독일어로 \"당신의 주소는 무엇입니까?\" (비격식) 문장을 쓰세요.",
+                    "questionType": "subjective",
+                    "correctAnswers": ["Wie ist deine Adresse?"],
+                    "rationale": "'당신의 주소는 무엇입니까?' (비격식)는 독일어로 'Wie ist deine Adresse?'입니다."
+                },
+                {
+                    "question": "나의 선생님의 이름은 Jinhee Lee입니다. 선생님을 어떻게 불러야 할까요?",
+                    "questionType": "subjective",
+                    "correctAnswers": ["Frau Lee!"],
+                    "rationale": "여성 선생님을 격식적으로 부를 때는 'Frau'와 성을 함께 사용합니다."
+                },
+                {
+                    "question": "독일어로 \"좋은 아침입니다\"를 사용하여 \"좋은 아침입니다, 안나!\" 문장을 쓰세요.",
+                    "questionType": "subjective",
+                    "correctAnswers": ["Guten Morgen, Anna!"],
+                    "rationale": "'좋은 아침입니다, 안나!'는 독일어로 'Guten Morgen, Anna!'입니다."
+                },
+                {
+                    "question": "'안녕히 계세요, 박 선생님!'을 독일어로 쓰세요. 박 선생님은 남자입니다.",
+                    "questionType": "subjective",
+                    "correctAnswers": ["Auf Wiedersehen, Herr Park!"],
+                    "rationale": "'안녕히 계세요, 박 선생님!'은 독일어로 'Auf Wiedersehen, Herr Park!'입니다."
+                }
+            ]
+        };
+
+        let quizQuestions = []; // 섞인 질문을 저장할 배열
+
+        // DOM 요소 가져오기
+        const startScreen = document.getElementById('start-screen');
+        const quizScreen = document.getElementById('quiz-screen');
+        const resultScreen = document.getElementById('result-screen');
+        const startButton = document.getElementById('start-button');
+        const questionNumberElement = document.getElementById('question-number');
+        const questionTextElement = document.getElementById('question-text');
+        const optionsContainer = document.getElementById('options-container');
+        const subjectiveInputContainer = document.getElementById('subjective-input-container');
+        const subjectiveAnswerInput = document.getElementById('subjective-answer-input');
+        const submitSubjectiveButton = document.getElementById('submit-subjective-button');
+        const feedbackContainer = document.getElementById('feedback-container');
+        const feedbackMessageElement = document.getElementById('feedback-message');
+        const rationaleMessageElement = document.getElementById('rationale-message');
+        const nextButton = document.getElementById('next-button');
+        const scoreTextElement = document.getElementById('score-text');
+        const passFailMessageElement = document.getElementById('pass-fail-message'); // 합격/불합격 메시지 요소
+        const restartButton = document.getElementById('restart-button');
+
+        let currentQuestionIndex = 0; // 현재 문제 인덱스
+        let score = 0; // 점수
+        let selectedOption = null; // 사용자가 선택한 옵션 (객관식용)
+
+        // Fisher-Yates 셔플 알고리즘
+        function shuffleArray(array) {
+            for (let i = array.length - 1; i > 0; i--) {
+                const j = Math.floor(Math.random() * (i + 1));
+                [array[i], array[j]] = [array[j], array[i]]; // 요소 교환
+            }
+            return array;
+        }
+
+        // 퀴즈 시작 함수
+        function startQuiz() {
+            startScreen.classList.add('hidden');
+            quizScreen.classList.remove('hidden');
+            currentQuestionIndex = 0;
+            score = 0;
+            // 퀴즈 시작 시 질문 배열을 섞음
+            quizQuestions = shuffleArray([...originalQuizData.questions]); // 원본 데이터는 유지하고 복사본을 섞음
+            loadQuestion();
+        }
+
+        // 문제 로드 및 표시 함수
+        function loadQuestion() {
+            resetQuizState();
+            const currentQuestion = quizQuestions[currentQuestionIndex]; // 섞인 배열에서 문제 가져오기
+
+            questionNumberElement.textContent = `문제 ${currentQuestionIndex + 1} / ${quizQuestions.length}`; // 전체 문제 수도 섞인 배열의 길이로
+            questionTextElement.textContent = currentQuestion.question;
+
+            // 모든 문제가 주관식이므로, 항상 주관식 입력 UI를 표시
+            optionsContainer.classList.add('hidden');
+            subjectiveInputContainer.classList.remove('hidden');
+            subjectiveAnswerInput.value = '';
+            subjectiveAnswerInput.disabled = false;
+            submitSubjectiveButton.disabled = false;
+        }
+
+        // 퀴즈 상태 초기화 함수
+        function resetQuizState() {
+            selectedOption = null;
+            feedbackContainer.classList.add('hidden');
+            nextButton.classList.add('hidden');
+            rationaleMessageElement.textContent = '';
+
+            // 객관식 관련 UI는 이제 사용되지 않으므로 이 부분은 사실상 필요 없음
+            Array.from(optionsContainer.children).forEach(button => {
+                button.classList.remove('selected', 'correct', 'incorrect');
+                button.disabled = false;
+            });
+        }
+
+        // 객관식 답변 처리 함수 (이제 사용되지 않음)
+        function handleMultipleChoiceAnswer(button, isCorrect, rationale) {
+            // 이 함수는 더 이상 호출되지 않습니다.
+        }
+
+        // 주관식 답변 처리 함수
+        function handleSubmitSubjectiveAnswer() {
+            let userAnswer = subjectiveAnswerInput.value.trim();
+            const currentQuestion = quizQuestions[currentQuestionIndex];
+            const correctAnswers = currentQuestion.correctAnswers;
+            const rationale = currentQuestion.rationale;
+
+            // 느낌표만 제거하는 정규화 함수
+            const removeExclamation = (str) => {
+                return str.replace(/!/g, '');
+            };
+
+            // 사용자 입력과 정답에서 느낌표만 제거한 후 비교
+            const normalizedUserAnswer = removeExclamation(userAnswer);
+
+            subjectiveAnswerInput.disabled = true;
+            submitSubjectiveButton.disabled = true;
+
+            let isCorrect = false;
+            // 모든 가능한 정답과 사용자 답변을 대소문자, 다른 구두점까지 정확히 비교
+            for (let i = 0; i < correctAnswers.length; i++) {
+                const normalizedCorrectAnswer = removeExclamation(correctAnswers[i]); // 정답에서도 느낌표 제거
+                if (normalizedUserAnswer === normalizedCorrectAnswer) {
+                    isCorrect = true;
+                    break;
+                }
+            }
+
+            if (isCorrect) {
+                feedbackMessageElement.textContent = '정답입니다!';
+                feedbackMessageElement.classList.remove('feedback-incorrect');
+                feedbackMessageElement.classList.add('feedback-correct');
+                score++;
+            } else {
+                feedbackMessageElement.textContent = `오답입니다. 정답은 '${correctAnswers.join(" 또는 ")}' 입니다.`;
+                feedbackMessageElement.classList.remove('feedback-correct');
+                feedbackMessageElement.classList.add('feedback-incorrect');
+            }
+
+            if (rationale) {
+                rationaleMessageElement.textContent = rationale;
+            } else {
+                rationaleMessageElement.textContent = '';
+            }
+
+            feedbackContainer.classList.remove('hidden');
+            nextButton.classList.remove('hidden');
+        }
+
+
+        // 다음 문제로 이동 또는 결과 표시 함수
+        function showNextQuestion() {
+            currentQuestionIndex++;
+            if (currentQuestionIndex < quizQuestions.length) {
+                loadQuestion();
+            } else {
+                showResults();
+            }
+        }
+
+        // 결과 화면 표시 함수
+        function showResults() {
+            quizScreen.classList.add('hidden');
+            resultScreen.classList.remove('hidden');
+
+            const totalQuestions = quizQuestions.length;
+            const percentageScore = (score / totalQuestions) * 100;
+
+            scoreTextElement.textContent = `${score} / ${totalQuestions} 문제 정답 (${percentageScore.toFixed(0)}점)`;
+
+            // 합격/불합격 메시지 표시
+            if (percentageScore >= 80) {
+                passFailMessageElement.textContent = '합격!';
+                passFailMessageElement.classList.remove('text-red-600');
+                passFailMessageElement.classList.add('text-green-600');
+            } else {
+                passFailMessageElement.textContent = '불합격';
+                passFailMessageElement.classList.remove('text-green-600');
+                passFailMessageElement.classList.add('text-red-600');
+            }
+        }
+
+        // 퀴즈 다시 시작 함수
+        function restartQuiz() {
+            resultScreen.classList.add('hidden');
+            startScreen.classList.remove('hidden');
+        }
+
+        // 이벤트 리스너 연결
+        startButton.addEventListener('click', startQuiz);
+        nextButton.addEventListener('click', showNextQuestion);
+        restartButton.addEventListener('click', restartQuiz);
+        submitSubjectiveButton.addEventListener('click', handleSubmitSubjectiveAnswer);
+    </script>
+</body>
+</html>
