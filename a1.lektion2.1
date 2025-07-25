@@ -1,0 +1,413 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>독일어 주관식 퀴즈</title>
+    <style>
+        /* 기본 스타일 */
+        body {
+            font-family: 'Inter', Arial, sans-serif; /* Inter 폰트 사용 */
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+            background-color: #f0f2f5; /* 부드러운 배경색 */
+            margin: 0;
+            padding: 20px;
+            box-sizing: border-box;
+            color: #333;
+        }
+        .quiz-container {
+            background-color: #ffffff;
+            padding: 30px;
+            border-radius: 15px; /* 더 둥근 모서리 */
+            box-shadow: 0 8px 16px rgba(0, 0, 0, 0.15); /* 더 깊은 그림자 */
+            text-align: center;
+            width: 100%;
+            max-width: 650px; /* 최대 너비 조정 */
+            box-sizing: border-box;
+        }
+        #quiz-area, #results-area {
+            display: none;
+        }
+
+        /* 버튼 스타일 */
+        button {
+            padding: 12px 25px;
+            font-size: 1.1em;
+            cursor: pointer;
+            border: none;
+            border-radius: 8px; /* 둥근 버튼 모서리 */
+            transition: all 0.3s ease;
+            margin: 8px; /* 버튼 간 간격 */
+            font-weight: bold;
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1); /* 버튼 그림자 */
+        }
+        #start-button {
+            background-color: #007bff;
+            color: white;
+            font-size: 1.3em;
+            padding: 18px 35px;
+        }
+        #start-button:hover {
+            background-color: #0056b3;
+            transform: translateY(-2px); /* 호버 시 약간 위로 */
+        }
+        #submit-button, #next-button {
+            background-color: #28a745;
+            color: white;
+        }
+        #submit-button:hover, #next-button:hover {
+            background-color: #218838;
+            transform: translateY(-2px);
+        }
+        #retry-button {
+            background-color: #6c757d;
+            color: white;
+            font-size: 1.3em;
+            padding: 18px 35px;
+        }
+        #retry-button:hover {
+            background-color: #5a6268;
+            transform: translateY(-2px);
+        }
+
+        /* 텍스트 및 입력 필드 스타일 */
+        h2 {
+            color: #2c3e50; /* 진한 헤더 색상 */
+            margin-bottom: 25px;
+            font-size: 1.8em;
+            font-weight: bold;
+        }
+        .subtitle { /* 부제목 스타일 추가 */
+            font-size: 1.5em; /* h2보다는 작고 일반 p보다는 크게 */
+            color: #555;
+            margin-top: -15px; /* h2와의 간격 조정 */
+            margin-bottom: 20px;
+            font-weight: normal;
+        }
+        #question-text {
+            font-size: 2.2em; /* 더 큰 문제 텍스트 */
+            margin-bottom: 40px;
+            color: #34495e; /* 문제 텍스트 색상 */
+            min-height: 80px; /* 문제 길이가 짧을 때 레이아웃 유지 */
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            background-color: #ecf0f1; /* 문제 배경색 */
+            padding: 20px;
+            border-radius: 10px;
+            box-shadow: inset 0 2px 4px rgba(0, 0, 0, 0.05);
+        }
+        #answer-input {
+            width: calc(100% - 40px); /* 패딩 고려 */
+            padding: 15px;
+            margin-bottom: 30px;
+            border: 2px solid #bdc3c7; /* 더 두꺼운 테두리 */
+            border-radius: 8px;
+            font-size: 1.3em;
+            text-align: center;
+            box-sizing: border-box;
+            transition: border-color 0.3s ease, box-shadow 0.3s ease;
+        }
+        #answer-input:focus {
+            border-color: #007bff;
+            box-shadow: 0 0 0 3px rgba(0, 123, 255, 0.25);
+            outline: none;
+        }
+        #feedback {
+            margin-top: 25px;
+            font-size: 1.2em;
+            font-weight: bold;
+            min-height: 40px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+        .correct {
+            color: #28a745; /* 초록색 */
+        }
+        .incorrect {
+            color: #dc3545; /* 빨간색 */
+        }
+
+        /* 결과 페이지 스타일 */
+        .result-item {
+            font-size: 1.4em;
+            margin-bottom: 12px;
+            color: #555;
+        }
+        .pass {
+            color: #28a745;
+            font-weight: bold;
+            font-size: 1.6em;
+        }
+        .fail {
+            color: #dc3545;
+            font-weight: bold;
+            font-size: 1.6em;
+        }
+
+        /* 반응형 디자인 */
+        @media (max-width: 768px) {
+            .quiz-container {
+                padding: 20px;
+            }
+            h2 {
+                font-size: 1.5em;
+            }
+            .subtitle {
+                font-size: 1.2em;
+            }
+            #question-text {
+                font-size: 1.8em;
+            }
+            #answer-input {
+                font-size: 1.1em;
+                padding: 10px;
+            }
+            button {
+                font-size: 1em;
+                padding: 10px 20px;
+            }
+            #start-button, #retry-button {
+                font-size: 1.1em;
+                padding: 12px 25px;
+            }
+            .result-item {
+                font-size: 1.2em;
+            }
+            .pass, .fail {
+                font-size: 1.4em;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="quiz-container">
+        <div id="start-area">
+            <h2>Lektion 2.1</h2>
+            <p class="subtitle">Ich spreche Koreanisch!</p> <!-- class="subtitle" 추가 -->
+            <p>시작 버튼을 누르면 퀴즈가 시작됩니다!</p>
+            <button id="start-button">시작하기</button>
+        </div>
+
+        <div id="quiz-area">
+            <p>문제 <span id="current-question-number"></span> / <span id="total-questions-count"></span></p>
+            <h2 id="question-text"></h2>
+            <input type="text" id="answer-input" placeholder="여기에 독일어를 입력하세요">
+            <div id="button-container">
+                <button id="submit-button">제출하기</button>
+            </div>
+            <div id="feedback"></div>
+        </div>
+
+        <div id="results-area">
+            <h2>퀴즈 결과</h2>
+            <p class="result-item">맞춘 개수: <span id="correct-count"></span> / <span id="total-results-count"></span></p>
+            <p class="result-item">점수: <span id="score"></span>점</p>
+            <p class="result-item">결과: <span id="pass-fail"></span></p>
+            <button id="retry-button">다시 시도하기</button>
+        </div>
+    </div>
+
+    <script>
+        // 퀴즈 데이터 정의
+        const originalQuizData = [
+            { question: "포르투갈어", correctAnswer: ["Portugiesisch"] },
+            { question: "폴란드어", correctAnswer: ["Polnisch"] },
+            { question: "그리스어", correctAnswer: ["Griechisch"] },
+            { question: "아랍어", correctAnswer: ["Arabisch"] },
+            { question: "우크라이나어", correctAnswer: ["Ukrainisch"] },
+            { question: "러시아어", correctAnswer: ["Russisch"] },
+            { question: "프랑스어", correctAnswer: ["Französisch"] },
+            { question: "중국어", correctAnswer: ["Chinesisch"] },
+            { question: "잘하는", correctAnswer: ["gut"] },
+            { question: "그것", correctAnswer: ["es"] },
+            { question: "우리", correctAnswer: ["wir"] },
+            { question: "너희", correctAnswer: ["ihr"] },
+            { question: "그들", correctAnswer: ["sie"] },
+            { question: "너는 어떤 언어를 말하니?", correctAnswer: ["Welche Sprachen sprichst du?"] },
+            { question: "당신은 어떤 언어를 말합니까?", correctAnswer: ["Welche Sprachen sprechen Sie?"] },
+            { question: "그녀는 어떤 언어를 말합니까?", correctAnswer: ["Welche Sprachen spricht sie?"] },
+            { question: "그는 어떤 언어를 말합니까?", correctAnswer: ["Welche Sprachen spricht er?"] },
+            { question: "너희는 어떤 언어를 말하니?", correctAnswer: ["Welche Sprachen sprecht ihr?"] },
+            { question: "저는 한국어와 독일어를 할 수 있습니다.", correctAnswer: ["Ich spreche Koreanisch und Deutsch."] },
+            { question: "그녀는 영어를 잘 합니다.", correctAnswer: ["Sie spricht gut Englisch."] },
+            { question: "그는 프랑스어를 조금 할 수 있습니다.", correctAnswer: ["Er spricht ein bisschen Französisch."] },
+            { question: "우리는 스페인어를 할 수 있고, 이탈리아어를 조금 할 수 있습니다.", correctAnswer: ["Wir sprechen Spanisch und ein bisschen Italienisch."] },
+            { question: "독일어를 할 수 있어? (비격식)", correctAnswer: ["Sprichst du Deutsch?"] },
+            { question: "독일어를 할 수 있습니까? (격식)", correctAnswer: ["Sprechen Sie Deutsch?"] },
+            { question: "네, 저는 독일어를 할 수 있습니다.", correctAnswer: ["Ja, ich spreche Deutsch."] },
+            { question: "아니요, 저는 독일어 못 합니다.", correctAnswer: ["Nein, ich spreche kein Deutsch."] },
+            { question: "그녀는 한국어를 할 수 있나요?", correctAnswer: ["Spricht sie Koreanisch?"] },
+            { question: "그는 한국어를 할 수 있나요?", correctAnswer: ["Spricht er Koreanisch?"] },
+            { question: "네, 그녀는 한국어를 조금 할 수 있습니다.", correctAnswer: ["Ja, sie spricht ein bisschen Koreanisch."] },
+            { question: "네, 그는 한국어를 조금 할 수 있습니다.", correctAnswer: ["Ja, er spricht ein bisschen Koreanisch."] },
+            { question: "아니요, 그녀는 한국어를 못 합니다.", correctAnswer: ["Nein, sie spricht kein Koreanisch."] },
+            { question: "아니요, 그는 한국어를 못 합니다.", correctAnswer: ["Nein, er spricht kein Koreanisch."] },
+            { question: "너희들 일본어 할 수 있니?", correctAnswer: ["Sprecht ihr Japanisch?"] },
+            { question: "응, 우리는 일본어를 할 수 있어.", correctAnswer: ["Ja, wir sprechen Japanisch."] },
+            { question: "아니, 우리는 일본어 전혀 못 해.", correctAnswer: ["Nein, wir sprechen gar kein Japanisch."] }
+        ];
+
+        let filteredQuizData = originalQuizData.filter(q => {
+            const questionText = q.question;
+            // 삭제할 문제들의 한국어 텍스트를 정확히 일치시켜 필터링합니다.
+            return !(
+                questionText === "그녀는 어떤 언어를 말합니까?" || // 16번
+                questionText === "그는 한국어를 할 수 있나요?" || // 28번
+                questionText === "네, 그녀는 한국어를 조금 할 수 있습니다." || // 29번
+                questionText === "아니요, 그는 한국어를 못 합니다." || // 32번
+                questionText === "응, 우리는 일본어를 할 수 있어." // 34번 (이전에 35번으로 잘못 삭제되었던 문제)
+            );
+        });
+
+        // 이제 filteredQuizData를 사용합니다.
+        let shuffledQuizData = [];
+        let currentQuestionIndex = 0;
+        let correctAnswersCount = 0;
+
+        // DOM 요소 가져오기
+        const startArea = document.getElementById('start-area');
+        const quizArea = document.getElementById('quiz-area');
+        const resultsArea = document.getElementById('results-area');
+        const startButton = document.getElementById('start-button');
+        const questionText = document.getElementById('question-text');
+        const answerInput = document.getElementById('answer-input');
+        const submitButton = document.getElementById('submit-button');
+        const feedback = document.getElementById('feedback');
+        const currentQuestionNumberSpan = document.getElementById('current-question-number');
+        const totalQuestionsCountSpan = document.getElementById('total-questions-count');
+        const correctCountSpan = document.getElementById('correct-count');
+        const totalResultsCountSpan = document.getElementById('total-results-count');
+        const scoreSpan = document.getElementById('score');
+        const passFailSpan = document.getElementById('pass-fail');
+        const retryButton = document.getElementById('retry-button');
+
+        // 배열 섞기 함수 (Fisher-Yates shuffle 알고리즘)
+        function shuffleArray(array) {
+            for (let i = array.length - 1; i > 0; i--) {
+                const j = Math.floor(Math.random() * (i + 1));
+                [array[i], array[j]] = [array[j], array[i]];
+            }
+            return array;
+        }
+
+        // 문자열 정규화 함수 (온점, 느낌표 제거 및 소문자 변환)
+        function normalizeString(str) {
+            // 모든 구두점 제거 (온점, 느낌표, 쉼표 등)
+            // 정규식 `/[.,!?;:]/g`는 온점, 쉼표, 느낌표, 물음표, 세미콜론, 콜론을 모두 제거합니다.
+            // 사용자가 입력한 내용에 따라 더 많은 구두점을 포함할 수 있습니다.
+            return str.replace(/[.,!?;:]/g, '').toLowerCase().trim();
+        }
+
+        // 퀴즈 시작
+        function startQuiz() {
+            shuffledQuizData = shuffleArray([...filteredQuizData]); // 필터링된 데이터를 섞어 새 배열에 저장
+            currentQuestionIndex = 0;
+            correctAnswersCount = 0;
+
+            startArea.style.display = 'none';
+            quizArea.style.display = 'block';
+            resultsArea.style.display = 'none';
+
+            totalQuestionsCountSpan.textContent = shuffledQuizData.length;
+            loadQuestion();
+        }
+
+        // 문제 로드
+        function loadQuestion() {
+            if (currentQuestionIndex < shuffledQuizData.length) {
+                const currentQuestion = shuffledQuizData[currentQuestionIndex];
+                questionText.textContent = currentQuestion.question;
+                answerInput.value = ''; // 입력 필드 초기화
+                feedback.textContent = ''; // 피드백 메시지 초기화
+                submitButton.textContent = '제출하기';
+                submitButton.onclick = handleSubmitAnswer; // 제출 버튼 클릭 시 이벤트 설정
+                answerInput.focus(); // 입력 필드에 포커스
+                currentQuestionNumberSpan.textContent = currentQuestionIndex + 1;
+            } else {
+                showResults(); // 모든 문제 풀이 완료
+            }
+        }
+
+        // 답변 제출 처리
+        function handleSubmitAnswer() {
+            const currentQuestion = shuffledQuizData[currentQuestionIndex];
+            const userAnswer = normalizeString(answerInput.value);
+            const correctAnswersNormalized = currentQuestion.correctAnswer.map(ans => normalizeString(ans));
+
+            let isCorrect = false;
+            for (const normalizedCorrect of correctAnswersNormalized) {
+                if (userAnswer === normalizedCorrect) {
+                    isCorrect = true;
+                    break;
+                }
+            }
+
+            if (isCorrect) {
+                feedback.textContent = '정답입니다!';
+                feedback.classList.remove('incorrect');
+                feedback.classList.add('correct');
+                correctAnswersCount++;
+            } else {
+                // 첫 번째 정답을 보여주되, 정규화되지 않은 원본 형태를 보여줌
+                feedback.textContent = `오답입니다. 정답은 "${currentQuestion.correctAnswer[0]}" 입니다.`;
+                feedback.classList.remove('correct');
+                feedback.classList.add('incorrect');
+            }
+
+            submitButton.textContent = '다음 문제';
+            submitButton.onclick = moveToNextQuestion; // 다음 문제 버튼 클릭 시 이벤트 변경
+        }
+
+        // 다음 문제로 이동
+        function moveToNextQuestion() {
+            currentQuestionIndex++;
+            loadQuestion();
+        }
+
+        // 결과 표시
+        function showResults() {
+            quizArea.style.display = 'none';
+            resultsArea.style.display = 'block';
+
+            const totalQuestions = shuffledQuizData.length;
+            const score = Math.round((correctAnswersCount / totalQuestions) * 100);
+            const pass = score >= 80;
+
+            correctCountSpan.textContent = correctAnswersCount;
+            totalResultsCountSpan.textContent = totalQuestions;
+            scoreSpan.textContent = score;
+
+            if (pass) {
+                passFailSpan.textContent = '합격';
+                passFailSpan.classList.remove('fail');
+                passFailSpan.classList.add('pass');
+            } else {
+                passFailSpan.textContent = '불합격';
+                passFailSpan.classList.remove('pass');
+                passFailSpan.classList.add('fail');
+            }
+        }
+
+        // 이벤트 리스너 연결
+        startButton.addEventListener('click', startQuiz);
+        retryButton.addEventListener('click', startQuiz); // 다시 시도하기 버튼 클릭 시 퀴즈 재시작
+
+        // 엔터 키로 제출/다음 문제 넘어가기
+        answerInput.addEventListener('keypress', function(event) {
+            if (event.key === 'Enter') {
+                // 현재 버튼의 텍스트에 따라 동작 결정
+                if (submitButton.textContent === '제출하기') {
+                    handleSubmitAnswer();
+                } else { // '다음 문제' 버튼일 경우
+                    moveToNextQuestion();
+                }
+            }
+        });
+    </script>
+</body>
+</html>
