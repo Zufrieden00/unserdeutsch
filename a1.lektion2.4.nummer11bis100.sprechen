@@ -1,0 +1,272 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>독일어 숫자 말하기 테스트</title>
+    <!-- Tailwind CSS CDN -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Font awesome for icons -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css">
+    <style>
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: #f3f4f6;
+        }
+        .container {
+            max-width: 600px;
+        }
+        /* Custom styles for microphone button animation */
+        @keyframes pulse {
+            0% { transform: scale(1); opacity: 1; }
+            50% { transform: scale(1.1); opacity: 0.7; }
+            100% { transform: scale(1); opacity: 1; }
+        }
+        .mic-button-listening {
+            animation: pulse 1.5s infinite;
+        }
+    </style>
+</head>
+<body class="bg-gray-100 flex items-center justify-center min-h-screen p-4">
+
+    <div id="app-container" class="container bg-white rounded-xl shadow-lg p-8 space-y-6 text-center">
+        <!-- Quiz content will be rendered here -->
+    </div>
+
+    <script>
+        // Check for Web Speech API support
+        window.SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+
+        let quizData = [];
+        const TOTAL_QUESTIONS = 20;
+        let currentQuestionIndex = 0;
+        let correctAnswersCount = 0;
+        let recognition = null;
+        let isListening = false;
+        
+        const appContainer = document.getElementById('app-container');
+
+        // Function to convert number to German word
+        function numberToGerman(num) {
+            const units = ["null", "eins", "zwei", "drei", "vier", "fünf", "sechs", "sieben", "acht", "neun"];
+            const teens = ["zehn", "elf", "zwölf", "dreizehn", "vierzehn", "fünfzehn", "sechzehn", "siebzehn", "achtzehn", "neunzehn"];
+            const tens = ["", "zehn", "zwanzig", "dreißig", "vierzig", "fünfzig", "sechzig", "siebzig", "achtzig", "neunzig"];
+
+            if (num < 10) {
+                return units[num];
+            } else if (num < 20) {
+                return teens[num - 10];
+            } else if (num === 100) {
+                return "einhundert";
+            } else {
+                const unit = num % 10;
+                const ten = Math.floor(num / 10);
+                if (unit === 0) {
+                    return tens[ten];
+                } else {
+                    return units[unit] + "und" + tens[ten];
+                }
+            }
+        }
+        
+        // Function to generate random quiz data
+        function generateQuizData(count) {
+            const data = [];
+            for (let i = 0; i < count; i++) {
+                const randomNumber = Math.floor(Math.random() * (100 - 11 + 1)) + 11; // 11 to 100
+                data.push({
+                    question: randomNumber.toString(),
+                    answer: numberToGerman(randomNumber)
+                });
+            }
+            return data;
+        }
+
+        // Function to sanitize input text for comparison
+        function sanitizeText(text) {
+            // Remove special characters, punctuation, and spaces for better comparison
+            return text.toLowerCase().trim().replace(/[.,\/#!$%\^&\*;:{}=\-_`~()?'"“”]/g,"").replace(/\s/g, '');
+        }
+
+        // Renders the quiz interface
+        function renderQuiz() {
+            appContainer.innerHTML = `
+                <h1 class="text-3xl font-bold text-gray-800">독일어 숫자 퀴즈 (11-100)</h1>
+                
+                <div class="bg-blue-50 p-6 rounded-lg shadow-inner">
+                    <p class="text-lg text-gray-700">다음 숫자를 독일어로 말해보세요:</p>
+                    <p id="question-text" class="text-5xl font-extrabold mt-2 text-blue-600">...</p>
+                </div>
+
+                <div id="feedback-area" class="h-10">
+                    <!-- Feedback messages will be displayed here -->
+                </div>
+
+                <div class="flex flex-col items-center space-y-4">
+                    <button id="mic-button" class="flex items-center justify-center w-20 h-20 bg-blue-500 text-white rounded-full shadow-lg transition-all hover:bg-blue-600 focus:outline-none focus:ring-4 focus:ring-blue-300">
+                        <i class="fas fa-microphone text-3xl"></i>
+                    </button>
+                    <span id="listening-text" class="text-sm text-gray-500 opacity-0 transition-opacity duration-300">말하는 중...</span>
+                </div>
+                
+                <button id="next-button" class="w-full bg-gray-300 text-gray-700 font-bold py-3 px-6 rounded-lg shadow-md opacity-0 transition-opacity duration-300 cursor-not-allowed" disabled>다음 문제</button>
+
+                <div id="status-message" class="mt-4 text-sm text-red-500 hidden">
+                    음성 인식 API가 지원되지 않거나 마이크 권한이 거부되었습니다.
+                </div>
+                <p class="mt-4 text-sm text-gray-500">마이크 아이콘을 누른 후 숫자를 발음해주세요.</p>
+            `;
+            
+            // Re-attach event listeners and check for API support after rendering
+            if (!window.SpeechRecognition) {
+                document.getElementById('status-message').classList.remove('hidden');
+            }
+            document.getElementById('mic-button').addEventListener('click', startSpeechRecognition);
+            document.getElementById('next-button').addEventListener('click', loadNextQuestion);
+            loadQuestion();
+        }
+
+        // Renders the results screen
+        function renderResults() {
+            const score = Math.round((correctAnswersCount / TOTAL_QUESTIONS) * 100);
+            const passStatus = score >= 80 ? '합격' : '불합격';
+            const statusColor = score >= 80 ? 'text-green-500' : 'text-red-500';
+
+            appContainer.innerHTML = `
+                <h1 class="text-3xl font-bold text-gray-800">독일어 숫자 퀴즈 (11~100) <br> 말하기 테스트 결과</h1>
+                
+                <div class="bg-blue-50 p-6 rounded-lg shadow-inner space-y-4">
+                    <p class="text-lg text-gray-700">맞힌 개수</p>
+                    <p class="text-5xl font-extrabold text-blue-600">${correctAnswersCount}/${TOTAL_QUESTIONS}</p>
+                </div>
+                
+                <div class="bg-blue-50 p-6 rounded-lg shadow-inner space-y-4">
+                    <p class="text-lg text-gray-700">점수 (100점 만점)</p>
+                    <p class="text-5xl font-extrabold text-blue-600">${score}점</p>
+                </div>
+                
+                <div class="bg-blue-50 p-6 rounded-lg shadow-inner space-y-4">
+                    <p class="text-lg text-gray-700">합격 여부 (80점 이상)</p>
+                    <p class="text-5xl font-extrabold ${statusColor}">${passStatus}</p>
+                </div>
+                
+                <button id="restart-button" class="w-full bg-blue-500 text-white font-bold py-3 px-6 rounded-lg shadow-md transition-all hover:bg-blue-600 focus:outline-none focus:ring-4 focus:ring-blue-300">
+                    새로운 퀴즈 시작
+                </button>
+            `;
+            document.getElementById('restart-button').addEventListener('click', startNewQuiz);
+        }
+
+        // Function to initialize and start speech recognition
+        function startSpeechRecognition() {
+            if (isListening || !window.SpeechRecognition) {
+                return;
+            }
+
+            const feedbackEl = document.getElementById('feedback-area');
+            const micButton = document.getElementById('mic-button');
+            const nextButton = document.getElementById('next-button');
+            const listeningTextEl = document.getElementById('listening-text');
+
+            recognition = new SpeechRecognition();
+            recognition.lang = 'de-DE'; // Set language to German
+            recognition.interimResults = false;
+            recognition.maxAlternatives = 1;
+
+            recognition.onstart = () => {
+                isListening = true;
+                feedbackEl.innerHTML = ''; // Clear previous feedback
+                micButton.classList.add('mic-button-listening');
+                listeningTextEl.classList.remove('opacity-0');
+                nextButton.disabled = true;
+                nextButton.classList.add('cursor-not-allowed', 'bg-gray-300', 'text-gray-700');
+                nextButton.classList.remove('bg-blue-500', 'text-white', 'hover:bg-blue-600', 'cursor-pointer');
+                nextButton.classList.add('opacity-0');
+            };
+
+            recognition.onresult = (event) => {
+                const transcript = event.results[0][0].transcript;
+                const currentAnswer = quizData[currentQuestionIndex].answer;
+                
+                const sanitizedTranscript = sanitizeText(transcript);
+                const sanitizedAnswer = sanitizeText(currentAnswer);
+
+                // Check if the transcript is the number string as well
+                const isCorrect = (sanitizedTranscript === sanitizedAnswer || transcript === quizData[currentQuestionIndex].question);
+                
+                let feedbackHtml = '';
+                if (isCorrect) {
+                    correctAnswersCount++;
+                    feedbackHtml = `<p class="text-xl font-bold text-green-500">정답입니다! <br> <span class="text-gray-700 font-normal">당신이 말한 내용: "${transcript}"</span></p>`;
+                } else {
+                    feedbackHtml = `<p class="text-xl font-bold text-red-500">오답입니다. <br> <span class="text-gray-700 font-normal">당신이 말한 내용: "${transcript}"</span></p>
+                                     <p class="text-lg text-gray-700 mt-1">정답은 <span class="font-bold">"${currentAnswer}"</span> 입니다.</p>`;
+                }
+                feedbackEl.innerHTML = feedbackHtml;
+                
+                nextButton.disabled = false;
+                nextButton.classList.remove('opacity-0');
+                nextButton.classList.remove('bg-gray-300', 'text-gray-700', 'cursor-not-allowed');
+                nextButton.classList.add('bg-blue-500', 'text-white', 'hover:bg-blue-600', 'cursor-pointer');
+            };
+
+            recognition.onerror = (event) => {
+                feedbackEl.innerHTML = `<p class="text-lg text-red-500">에러 발생: ${event.error}</p>`;
+                isListening = false;
+            };
+
+            recognition.onend = () => {
+                isListening = false;
+                micButton.classList.remove('mic-button-listening');
+                listeningTextEl.classList.add('opacity-0');
+            };
+
+            try {
+                recognition.start();
+            } catch (error) {
+                console.error("Speech recognition start error:", error);
+                feedbackEl.innerHTML = `<p class="text-lg text-red-500">마이크를 사용할 수 없습니다. 권한을 확인해주세요.</p>`;
+                isListening = false;
+            }
+        }
+
+        // Function to load the next question or show results
+        function loadNextQuestion() {
+            if (currentQuestionIndex < TOTAL_QUESTIONS - 1) {
+                currentQuestionIndex++;
+                loadQuestion();
+            } else {
+                renderResults();
+            }
+        }
+        
+        // Function to display a question
+        function loadQuestion() {
+            const questionEl = document.getElementById('question-text');
+            const feedbackEl = document.getElementById('feedback-area');
+            const nextButton = document.getElementById('next-button');
+
+            const currentQuestion = quizData[currentQuestionIndex];
+            questionEl.textContent = currentQuestion.question;
+            feedbackEl.innerHTML = '';
+            
+            // Reset next button state
+            nextButton.disabled = true;
+            nextButton.classList.add('opacity-0');
+            nextButton.classList.add('cursor-not-allowed', 'bg-gray-300', 'text-gray-700');
+            nextButton.classList.remove('bg-blue-500', 'text-white', 'hover:bg-blue-600', 'cursor-pointer');
+        }
+
+        // Function to start a new quiz
+        function startNewQuiz() {
+            quizData = generateQuizData(TOTAL_QUESTIONS);
+            currentQuestionIndex = 0;
+            correctAnswersCount = 0;
+            renderQuiz();
+        }
+
+        // Initial load
+        window.onload = startNewQuiz;
+    </script>
+</body>
+</html>
