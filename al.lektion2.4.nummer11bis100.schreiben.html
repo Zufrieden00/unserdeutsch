@@ -1,0 +1,231 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>독일어 숫자 쓰기 테스트</title>
+    <!-- Tailwind CSS CDN -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Font awesome for icons -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css">
+    <style>
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: #f3f4f6;
+        }
+        .container {
+            max-width: 600px;
+        }
+    </style>
+</head>
+<body class="bg-gray-100 flex items-center justify-center min-h-screen p-4">
+
+    <div id="app-container" class="container bg-white rounded-xl shadow-lg p-8 space-y-6 text-center">
+        <!-- Quiz content will be rendered here -->
+    </div>
+
+    <script>
+        let quizData = [];
+        const TOTAL_QUESTIONS = 20;
+        let currentQuestionIndex = 0;
+        let correctAnswersCount = 0;
+        
+        const appContainer = document.getElementById('app-container');
+
+        // Function to convert number to German word
+        function numberToGerman(num) {
+            const units = ["null", "ein", "zwei", "drei", "vier", "fünf", "sechs", "sieben", "acht", "neun"];
+            const teens = ["zehn", "elf", "zwölf", "dreizehn", "vierzehn", "fünfzehn", "sechzehn", "siebzehn", "achtzehn", "neunzehn"];
+            const tens = ["", "zehn", "zwanzig", "dreißig", "vierzig", "fünfzig", "sechzig", "siebzig", "achtzig", "neunzig"];
+
+            if (num < 10) {
+                // Special case for 'eins' vs 'ein'
+                return num === 1 ? 'eins' : units[num];
+            } else if (num < 20) {
+                return teens[num - 10];
+            } else if (num === 100) {
+                return "einhundert";
+            } else {
+                const unit = num % 10;
+                const ten = Math.floor(num / 10);
+                if (unit === 0) {
+                    return tens[ten];
+                } else {
+                    // Corrected logic for numbers ending in '1'
+                    const unitWord = unit === 1 ? 'ein' : units[unit];
+                    return unitWord + "und" + tens[ten];
+                }
+            }
+        }
+        
+        // Function to generate random quiz data
+        function generateQuizData(count) {
+            const data = [];
+            for (let i = 0; i < count; i++) {
+                const randomNumber = Math.floor(Math.random() * (100 - 11 + 1)) + 11; // 11 to 100
+                data.push({
+                    question: randomNumber.toString(),
+                    answer: numberToGerman(randomNumber)
+                });
+            }
+            return data;
+        }
+
+        // Function to sanitize input text for comparison
+        function sanitizeText(text) {
+            // Remove special characters, punctuation, and spaces for better comparison
+            return text.toLowerCase().trim().replace(/[.,\/#!$%\^&\*;:{}=\-_`~()?'"“”]/g,"").replace(/\s/g, '');
+        }
+
+        // Renders the quiz interface
+        function renderQuiz() {
+            appContainer.innerHTML = `
+                <h1 class="text-3xl font-bold text-gray-800">독일어 숫자 퀴즈 (11-100)</h1>
+                
+                <div class="bg-blue-50 p-6 rounded-lg shadow-inner">
+                    <p class="text-lg text-gray-700">다음 숫자를 독일어로 써보세요:</p>
+                    <p id="question-text" class="text-5xl font-extrabold mt-2 text-blue-600">...</p>
+                </div>
+
+                <div id="feedback-area" class="h-10">
+                    <!-- Feedback messages will be displayed here -->
+                </div>
+
+                <div class="flex flex-col items-center space-y-4">
+                    <input type="text" id="answer-input" placeholder="정답을 입력하세요..." class="w-full text-center p-3 text-lg border-2 border-gray-300 rounded-lg focus:outline-none focus:border-blue-500">
+                    <button id="submit-button" class="w-full bg-blue-500 text-white font-bold py-3 px-6 rounded-lg shadow-md transition-all hover:bg-blue-600 focus:outline-none focus:ring-4 focus:ring-blue-300">
+                        제출
+                    </button>
+                </div>
+                
+                <button id="next-button" class="w-full bg-gray-300 text-gray-700 font-bold py-3 px-6 rounded-lg shadow-md opacity-0 transition-opacity duration-300 cursor-not-allowed" disabled>다음 문제</button>
+            `;
+            
+            // Re-attach event listeners after rendering
+            const answerInput = document.getElementById('answer-input');
+            document.getElementById('submit-button').addEventListener('click', checkAnswer);
+            document.getElementById('next-button').addEventListener('click', loadNextQuestion);
+
+            // Add event listener for "Enter" keypress
+            answerInput.addEventListener('keydown', (event) => {
+                if (event.key === 'Enter' && !document.getElementById('submit-button').disabled) {
+                    checkAnswer();
+                } else if (event.key === 'Enter' && !document.getElementById('next-button').disabled) {
+                    loadNextQuestion();
+                }
+            });
+
+            loadQuestion();
+        }
+
+        // Renders the results screen
+        function renderResults() {
+            const score = Math.round((correctAnswersCount / TOTAL_QUESTIONS) * 100);
+            const passStatus = score >= 80 ? '합격' : '불합격';
+            const statusColor = score >= 80 ? 'text-green-500' : 'text-red-500';
+
+            appContainer.innerHTML = `
+                <h1 class="text-3xl font-bold text-gray-800">독일어 숫자 퀴즈 (11~100) <br> 쓰기 테스트 결과</h1>
+                
+                <div class="bg-blue-50 p-6 rounded-lg shadow-inner space-y-4">
+                    <p class="text-lg text-gray-700">맞힌 개수</p>
+                    <p class="text-5xl font-extrabold text-blue-600">${correctAnswersCount}/${TOTAL_QUESTIONS}</p>
+                </div>
+                
+                <div class="bg-blue-50 p-6 rounded-lg shadow-inner space-y-4">
+                    <p class="text-lg text-gray-700">점수 (100점 만점)</p>
+                    <p class="text-5xl font-extrabold text-blue-600">${score}점</p>
+                </div>
+                
+                <div class="bg-blue-50 p-6 rounded-lg shadow-inner space-y-4">
+                    <p class="text-lg text-gray-700">합격 여부 (80점 이상)</p>
+                    <p class="text-5xl font-extrabold ${statusColor}">${passStatus}</p>
+                </div>
+                
+                <button id="restart-button" class="w-full bg-blue-500 text-white font-bold py-3 px-6 rounded-lg shadow-md transition-all hover:bg-blue-600 focus:outline-none focus:ring-4 focus:ring-blue-300">
+                    새로운 퀴즈 시작
+                </button>
+            `;
+            document.getElementById('restart-button').addEventListener('click', startNewQuiz);
+        }
+
+        // Function to check the user's answer
+        function checkAnswer() {
+            const answerInput = document.getElementById('answer-input');
+            const feedbackEl = document.getElementById('feedback-area');
+            const submitButton = document.getElementById('submit-button');
+            const nextButton = document.getElementById('next-button');
+
+            const userAnswer = answerInput.value;
+            const currentAnswer = quizData[currentQuestionIndex].answer;
+            
+            const sanitizedUserAnswer = sanitizeText(userAnswer);
+            const sanitizedCorrectAnswer = sanitizeText(currentAnswer);
+
+            const isCorrect = sanitizedUserAnswer === sanitizedCorrectAnswer;
+            
+            let feedbackHtml = '';
+            if (isCorrect) {
+                correctAnswersCount++;
+                feedbackHtml = `<p class="text-xl font-bold text-green-500">정답입니다!</p>`;
+            } else {
+                feedbackHtml = `<p class="text-xl font-bold text-red-500">오답입니다.</p>
+                                <p class="text-lg text-gray-700 mt-1">정답은 <span class="font-bold">"${currentAnswer}"</span> 입니다.</p>`;
+            }
+            feedbackEl.innerHTML = feedbackHtml;
+
+            // Disable submit button and enable next button
+            submitButton.disabled = true;
+            submitButton.classList.add('opacity-50', 'cursor-not-allowed');
+            nextButton.disabled = false;
+            nextButton.classList.remove('opacity-0', 'bg-gray-300', 'text-gray-700', 'cursor-not-allowed');
+            nextButton.classList.add('bg-blue-500', 'text-white', 'hover:bg-blue-600', 'cursor-pointer');
+        }
+
+        // Function to load the next question or show results
+        function loadNextQuestion() {
+            if (currentQuestionIndex < TOTAL_QUESTIONS - 1) {
+                currentQuestionIndex++;
+                loadQuestion();
+            } else {
+                renderResults();
+            }
+        }
+        
+        // Function to display a question
+        function loadQuestion() {
+            const questionEl = document.getElementById('question-text');
+            const feedbackEl = document.getElementById('feedback-area');
+            const nextButton = document.getElementById('next-button');
+            const submitButton = document.getElementById('submit-button');
+            const answerInput = document.getElementById('answer-input');
+            
+            const currentQuestion = quizData[currentQuestionIndex];
+            questionEl.textContent = currentQuestion.question;
+            feedbackEl.innerHTML = '';
+            
+            // Clear input and re-enable submit button
+            answerInput.value = '';
+            answerInput.focus();
+            submitButton.disabled = false;
+            submitButton.classList.remove('opacity-50', 'cursor-not-allowed');
+            
+            // Reset next button state
+            nextButton.disabled = true;
+            nextButton.classList.add('opacity-0', 'cursor-not-allowed', 'bg-gray-300', 'text-gray-700');
+            nextButton.classList.remove('bg-blue-500', 'text-white', 'hover:bg-blue-600', 'cursor-pointer');
+        }
+
+        // Function to start a new quiz
+        function startNewQuiz() {
+            quizData = generateQuizData(TOTAL_QUESTIONS);
+            currentQuestionIndex = 0;
+            correctAnswersCount = 0;
+            renderQuiz();
+        }
+
+        // Initial load
+        window.onload = startNewQuiz;
+    </script>
+</body>
+</html>
