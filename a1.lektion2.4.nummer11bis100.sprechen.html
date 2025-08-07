@@ -25,6 +25,10 @@
         .mic-button-listening {
             animation: pulse 1.5s infinite;
         }
+        .mic-button-disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+        }
     </style>
 </head>
 <body class="bg-gray-100 flex items-center justify-center min-h-screen p-4">
@@ -168,6 +172,10 @@
             const nextButton = document.getElementById('next-button');
             const listeningTextEl = document.getElementById('listening-text');
 
+            // Disable mic button on start
+            micButton.disabled = true;
+            micButton.classList.add('mic-button-disabled');
+
             recognition = new SpeechRecognition();
             recognition.lang = 'de-DE'; // Set language to German
             recognition.interimResults = false;
@@ -245,10 +253,15 @@
             const questionEl = document.getElementById('question-text');
             const feedbackEl = document.getElementById('feedback-area');
             const nextButton = document.getElementById('next-button');
-
+            const micButton = document.getElementById('mic-button');
+            
             const currentQuestion = quizData[currentQuestionIndex];
             questionEl.textContent = currentQuestion.question;
             feedbackEl.innerHTML = '';
+            
+            // Re-enable mic button for the new question
+            micButton.disabled = false;
+            micButton.classList.remove('mic-button-disabled');
             
             // Reset next button state
             nextButton.disabled = true;
