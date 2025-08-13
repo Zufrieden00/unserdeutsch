@@ -183,7 +183,7 @@
         // 현재 문제를 렌더링하는 함수
         function renderQuestion() {
             // 현재 문제 상태 업데이트
-            quizStatus.textContent = `문제 ${currentQuestionIndex + 1} / ${totalQuestions} (점수: ${score}점)`;
+            quizStatus.textContent = `문제 ${currentQuestionIndex + 1} / ${totalQuestions} (맞은 개수: ${score}개)`;
 
             const currentQuestion = shuffledQuizData[currentQuestionIndex];
             
@@ -345,7 +345,7 @@
 
             answerFeedback.classList.remove('hidden');
             nextBtn.classList.remove('hidden');
-            quizStatus.textContent = `문제 ${currentQuestionIndex + 1} / ${totalQuestions} (점수: ${score}점)`;
+            quizStatus.textContent = `문제 ${currentQuestionIndex + 1} / ${totalQuestions} (맞은 개수: ${score}개)`;
         }
 
         // 다음 문제로 넘어가는 함수
