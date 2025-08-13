@@ -1,0 +1,287 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>독일어 단어 퀴즈</title>
+    <!-- Inter 폰트와 Tailwind CSS를 로드합니다 -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap">
+    <style>
+        body {
+            font-family: 'Inter', sans-serif;
+        }
+    </style>
+</head>
+<body class="bg-blue-50 flex items-center justify-center min-h-screen p-4">
+    <div id="quiz-container" class="bg-white p-8 rounded-3xl shadow-2xl max-w-lg w-full flex flex-col items-center text-center space-y-8 border border-blue-100">
+        <!-- 퀴즈 제목 -->
+        <div class="w-full">
+            <h1 class="text-4xl font-bold text-blue-800">독일어 단어 퀴즈</h1>
+            <p id="progress-text" class="text-sm text-gray-500 mt-2">문제 0 / 0</p>
+        </div>
+
+        <!-- 퀴즈 진행 상태 및 결과 -->
+        <div id="quiz-area" class="w-full space-y-6">
+            <!-- 질문 표시 영역 -->
+            <p id="question" class="text-3xl font-semibold text-gray-700 h-20 flex items-center justify-center bg-blue-50 rounded-xl p-4 transition-colors duration-300">문제를 불러오는 중...</p>
+            
+            <!-- 단어 정보 표시 영역 (정답 확인 후 보여짐) -->
+            <p id="word-info" class="text-sm text-gray-500 h-6"></p>
+
+            <!-- 사용자 입력 필드 -->
+            <input type="text" id="answer-input" placeholder="독일어 단어를 입력하세요" class="w-full p-4 text-xl rounded-2xl border-2 border-blue-200 focus:border-blue-500 focus:outline-none transition-all duration-200 shadow-inner">
+
+            <!-- 피드백 메시지 영역 -->
+            <p id="feedback" class="text-lg h-8 font-bold"></p>
+
+            <!-- 버튼 그룹 -->
+            <div class="flex space-x-4 justify-center">
+                <button id="check-button" class="bg-blue-600 hover:bg-blue-700 text-white font-bold py-4 px-8 rounded-2xl shadow-md transition-all duration-200 transform hover:scale-105">확인</button>
+                <button id="next-button" class="bg-gray-400 text-white font-bold py-4 px-8 rounded-2xl shadow-md cursor-not-allowed transition-all duration-200" disabled>다음 문제</button>
+            </div>
+        </div>
+
+        <!-- 최종 결과 표시 영역 -->
+        <div id="result-area" class="hidden w-full space-y-6">
+            <h2 class="text-3xl font-bold text-blue-800">퀴즈 완료! 🎉</h2>
+            <p id="score-text" class="text-2xl text-gray-700">점수: 0 / 0</p>
+            <button id="restart-button" class="bg-green-600 hover:bg-green-700 text-white font-bold py-4 px-8 rounded-2xl shadow-md transition-all duration-200 transform hover:scale-105">다시 시작</button>
+        </div>
+    </div>
+
+    <script>
+        // 퀴즈 데이터를 정의합니다.
+        const quizData = [
+            {
+                korean: "남자 사장, 상사",
+                german: ["der Chef"],
+                info: "der Chef(-s)"
+            },
+            {
+                korean: "여자 사장, 상사",
+                german: ["die Chefin"],
+                info: "die Chefin(-nen)"
+            },
+            {
+                korean: "남자 동료",
+                german: ["der Kollege"],
+                info: "der Kollege(-n)"
+            },
+            {
+                korean: "여자 동료",
+                german: ["die Kollegin"],
+                info: "die Kollegin(-nen)"
+            },
+            {
+                korean: "남자 판매원",
+                german: ["der Verkäufer"],
+                info: "der Verkäufer(-)"
+            },
+            {
+                korean: "여자 판매원",
+                german: ["die Verkäuferin"],
+                info: "die Verkäuferin(-nen)"
+            },
+            {
+                korean: "남자 엔지니어",
+                german: ["der Ingenieur"],
+                info: "der Ingenieur(-e)"
+            },
+            {
+                korean: "여자 엔지니어",
+                german: ["die Ingenieurin"],
+                info: "die Ingenieurin(-nen)"
+            },
+            {
+                korean: "남자 버스기사",
+                german: ["der Busfahrer"],
+                info: "der Busfahrer(-)"
+            },
+            {
+                korean: "여자 버스기사",
+                german: ["die Busfahrerin"],
+                info: "die Busfahrerin(-nen)"
+            },
+            {
+                korean: "남자 교사",
+                german: ["der Lehrer"],
+                info: "der Lehrer(-)"
+            },
+            {
+                korean: "여자 교사",
+                german: ["die Lehrerin"],
+                info: "die Lehrerin(-nen)"
+            },
+            {
+                korean: "남자 간호사",
+                german: ["der Krankenpfleger"],
+                info: "der Krankenpfleger(-)"
+            },
+            {
+                korean: "여자 간호사",
+                german: ["die Krankenschwester"],
+                info: "die Krankenschwester(-)"
+            },
+            {
+                korean: "남자 대학생",
+                german: ["der Student"],
+                info: "der Student(-en)"
+            },
+            {
+                korean: "여자 대학생",
+                german: ["die Studentin"],
+                info: "die Studentin(-nen)"
+            },
+            {
+                korean: "직업이 없는, 실직한",
+                german: ["arbeitslos"],
+                info: "arbeitslos"
+            },
+            {
+                korean: "유한책임회사",
+                german: ["GmbH"],
+                info: "GmbH (독일에서 흔한 회사 유형)"
+            },
+            {
+                korean: "회사, 기업",
+                german: ["die Firma"],
+                info: "die Firma(die Firmen)"
+            },
+            {
+                korean: "회사에",
+                german: ["in der Firma"],
+                info: "in der Firma"
+            },
+            {
+                korean: "사무실에",
+                german: ["im Büro"],
+                info: "im Büro"
+            }
+        ];
+
+        // DOM 요소들을 가져옵니다.
+        const quizArea = document.getElementById('quiz-area');
+        const resultArea = document.getElementById('result-area');
+        const questionElement = document.getElementById('question');
+        const wordInfoElement = document.getElementById('word-info');
+        const answerInput = document.getElementById('answer-input');
+        const feedbackElement = document.getElementById('feedback');
+        const checkButton = document.getElementById('check-button');
+        const nextButton = document.getElementById('next-button');
+        const restartButton = document.getElementById('restart-button');
+        const scoreText = document.getElementById('score-text');
+        const progressText = document.getElementById('progress-text');
+
+        let currentQuestionIndex = 0;
+        let score = 0;
+
+        // 퀴즈를 시작하는 함수
+        function startQuiz() {
+            // 문제를 무작위로 섞습니다.
+            quizData.sort(() => Math.random() - 0.5);
+            currentQuestionIndex = 0;
+            score = 0;
+            quizArea.classList.remove('hidden');
+            resultArea.classList.add('hidden');
+            loadQuestion();
+            updateProgress();
+        }
+
+        // 다음 문제를 불러오는 함수
+        function loadQuestion() {
+            if (currentQuestionIndex < quizData.length) {
+                const currentQuestion = quizData[currentQuestionIndex];
+                questionElement.textContent = currentQuestion.korean;
+                wordInfoElement.textContent = ""; // 단어 정보 초기화
+                answerInput.value = '';
+                feedbackElement.textContent = '';
+                answerInput.disabled = false; // 입력 활성화
+                checkButton.disabled = false; // 확인 버튼 활성화
+                checkButton.classList.remove('bg-gray-400', 'cursor-not-allowed');
+                checkButton.classList.add('bg-blue-600', 'hover:bg-blue-700', 'transform', 'hover:scale-105');
+                nextButton.disabled = true; // 다음 문제 버튼 비활성화
+                nextButton.classList.remove('bg-blue-600', 'hover:bg-blue-700', 'transform', 'hover:scale-105');
+                nextButton.classList.add('bg-gray-400', 'cursor-not-allowed');
+                answerInput.focus(); // 입력 필드에 포커스
+            } else {
+                showResult();
+            }
+        }
+
+        // 퀴즈 진행 상태를 업데이트하는 함수
+        function updateProgress() {
+            progressText.textContent = `문제 ${currentQuestionIndex + 1} / ${quizData.length}`;
+            if (currentQuestionIndex >= quizData.length) {
+                progressText.textContent = `퀴즈 완료!`;
+            }
+        }
+
+        // 정답을 확인하는 함수
+        function checkAnswer() {
+            const userAnswer = answerInput.value.trim().toLowerCase();
+            const currentQuestion = quizData[currentQuestionIndex];
+            // 정답 목록을 소문자로 변환하여 비교합니다.
+            const correctAnswers = currentQuestion.german.map(ans => ans.toLowerCase());
+
+            // 정답 여부를 확인합니다.
+            if (correctAnswers.includes(userAnswer)) {
+                feedbackElement.textContent = '정답입니다! 😊';
+                feedbackElement.classList.remove('text-red-500');
+                feedbackElement.classList.add('text-green-600');
+                score++;
+            } else {
+                feedbackElement.textContent = `틀렸습니다. 정답: ${currentQuestion.german.join(' 또는 ')}`;
+                feedbackElement.classList.remove('text-green-600');
+                feedbackElement.classList.add('text-red-500');
+            }
+
+            // 단어 정보 표시
+            wordInfoElement.textContent = `(${currentQuestion.info})`;
+
+            // 버튼 상태 변경
+            answerInput.disabled = true; // 입력 비활성화
+            checkButton.disabled = true; // 확인 버튼 비활성화
+            checkButton.classList.remove('bg-blue-600', 'hover:bg-blue-700', 'transform', 'hover:scale-105');
+            checkButton.classList.add('bg-gray-400', 'cursor-not-allowed');
+            nextButton.disabled = false; // 다음 문제 버튼 활성화
+            nextButton.classList.remove('bg-gray-400', 'cursor-not-allowed');
+            nextButton.classList.add('bg-blue-600', 'hover:bg-blue-700', 'transform', 'hover:scale-105');
+        }
+
+        // 최종 결과를 표시하는 함수
+        function showResult() {
+            quizArea.classList.add('hidden');
+            resultArea.classList.remove('hidden');
+            scoreText.textContent = `점수: ${score} / ${quizData.length}`;
+        }
+
+        // 이벤트 리스너를 추가합니다.
+        checkButton.addEventListener('click', checkAnswer);
+        nextButton.addEventListener('click', () => {
+            currentQuestionIndex++;
+            loadQuestion();
+            updateProgress();
+        });
+        restartButton.addEventListener('click', startQuiz);
+
+        // 문서 전체에서 Enter 키를 감지하여 동작을 제어합니다.
+        document.addEventListener('keyup', (e) => {
+            if (e.key === 'Enter') {
+                if (!checkButton.disabled) {
+                    // '확인' 버튼이 활성화된 상태면 정답 확인
+                    checkAnswer();
+                } else if (!nextButton.disabled) {
+                    // '다음 문제' 버튼이 활성화된 상태면 다음 문제로 이동
+                    currentQuestionIndex++;
+                    loadQuestion();
+                    updateProgress();
+                }
+            }
+        });
+
+        // 페이지 로드 시 퀴즈 시작
+        window.onload = startQuiz;
+    </script>
+</body>
+</html>
