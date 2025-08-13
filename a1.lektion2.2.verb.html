@@ -1,7 +1,7 @@
 <!DOCTYPE html>
 <html lang="ko">
 <head>
-    <meta charset="UTF-8">
+    <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>독일어 동사변화 퀴즈</title>
     <!-- Inter 폰트와 Tailwind CSS를 로드합니다 -->
@@ -160,7 +160,7 @@
             const correctAnswers = currentQuestion.german.map(ans => ans.toLowerCase());
 
             if (correctAnswers.includes(userAnswer)) {
-                feedbackElement.textContent = '정답입니다! �';
+                feedbackElement.textContent = '정답입니다! 😊';
                 feedbackElement.classList.remove('text-red-500');
                 feedbackElement.classList.add('text-green-600');
                 score++;
@@ -263,4 +263,3 @@
     </script>
 </body>
 </html>
-�
