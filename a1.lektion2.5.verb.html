@@ -1,0 +1,405 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>독일어 단어 퀴즈</title>
+    <!-- Inter 폰트와 Tailwind CSS를 로드합니다 -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap">
+    <style>
+        body {
+            font-family: 'Inter', sans-serif;
+        }
+        /* 마이크 버튼 애니메이션을 위한 키프레임 */
+        @keyframes pulse {
+            0% {
+                box-shadow: 0 0 0 0 rgba(255, 255, 255, 0.7);
+            }
+            70% {
+                box-shadow: 0 0 0 10px rgba(255, 255, 255, 0);
+            }
+            100% {
+                box-shadow: 0 0 0 0 rgba(255, 255, 255, 0);
+            }
+        }
+        .animate-pulse-white {
+            animation: pulse 1.5s infinite;
+        }
+    </style>
+    <!-- Font Awesome 아이콘을 로드합니다 -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.1.1/css/all.min.css">
+</head>
+<body class="bg-blue-50 flex items-center justify-center min-h-screen p-4">
+    <div id="quiz-container" class="bg-white p-8 rounded-3xl shadow-2xl max-w-lg w-full flex flex-col items-center text-center space-y-8 border border-blue-100">
+        <!-- 퀴즈 제목 -->
+        <div class="w-full">
+            <h1 class="text-4xl font-bold text-blue-800">Lektion 2.5 동사변화 퀴즈</h1>
+        </div>
+
+        <!-- 퀴즈 유형 선택 영역 -->
+        <div id="quiz-selection-area" class="w-full space-y-6">
+            <h2 class="text-2xl font-semibold text-gray-700">퀴즈 유형을 선택하세요.</h2>
+            <div class="flex flex-col space-y-4">
+                <button id="writing-quiz-btn" class="bg-blue-600 hover:bg-blue-700 text-white font-bold py-4 px-8 rounded-2xl shadow-md transition-all duration-200 transform hover:scale-105">작문 퀴즈</button>
+                <button id="speaking-quiz-btn" class="bg-purple-600 hover:bg-purple-700 text-white font-bold py-4 px-8 rounded-2xl shadow-md transition-all duration-200 transform hover:scale-105">말하기 퀴즈</button>
+            </div>
+        </div>
+
+        <!-- 퀴즈 진행 상태 및 결과 -->
+        <div id="quiz-area" class="hidden w-full space-y-6">
+            <p id="progress-text" class="text-sm text-gray-500 mt-2">문제 0 / 0</p>
+            <!-- 질문 표시 영역 -->
+            <p id="question" class="text-3xl font-semibold text-gray-700 h-20 flex items-center justify-center bg-blue-50 rounded-xl p-4 transition-colors duration-300">문제를 불러오는 중...</p>
+            
+            <!-- 단어 정보 표시 영역 (정답 확인 후 보여짐) -->
+            <p id="word-info" class="text-sm text-gray-500 h-6"></p>
+
+            <!-- 사용자 입력 필드 -->
+            <div class="relative w-full">
+                <input type="text" id="answer-input" placeholder="정답을 입력하세요" class="w-full p-4 pr-16 text-xl rounded-2xl border-2 border-blue-200 focus:border-blue-500 focus:outline-none transition-all duration-200 shadow-inner">
+                <button id="mic-button" class="absolute right-4 top-1/2 -translate-y-1/2 p-2 rounded-full w-12 h-12 flex items-center justify-center bg-blue-600 text-white hover:bg-blue-700 transition-colors duration-200">
+                    <i class="fas fa-microphone text-xl"></i>
+                </button>
+            </div>
+            
+            <!-- 마이크 오류 메시지 영역 -->
+            <p id="mic-error-message" class="text-sm text-red-500 hidden"></p>
+
+            <!-- 피드백 메시지 영역 -->
+            <p id="feedback" class="text-lg h-8 font-bold"></p>
+            
+            <!-- 버튼 그룹 -->
+            <div class="flex space-x-4 justify-center">
+                <button id="check-button" class="bg-blue-600 hover:bg-blue-700 text-white font-bold py-4 px-8 rounded-2xl shadow-md transition-all duration-200 transform hover:scale-105">확인</button>
+                <button id="next-button" class="bg-gray-400 text-white font-bold py-4 px-8 rounded-2xl shadow-md cursor-not-allowed transition-all duration-200" disabled>다음 문제</button>
+            </div>
+        </div>
+
+        <!-- 최종 결과 표시 영역 -->
+        <div id="result-area" class="hidden w-full space-y-6">
+            <h2 class="text-3xl font-bold text-blue-800">퀴즈 완료! 🎉</h2>
+            <p id="score-text" class="text-2xl text-gray-700">점수: ${score} / ${quizData.length}</p>
+            <button id="restart-button" class="bg-green-600 hover:bg-green-700 text-white font-bold py-4 px-8 rounded-2xl shadow-md transition-all duration-200 transform hover:scale-105">다시 시작</button>
+        </div>
+    </div>
+
+    <script>
+        // 새로운 동사 변형 퀴즈 데이터를 정의합니다.
+        const verbQuizData = [
+            { korean: "나는 할 수 있다.", german: ["Ich kann"] },
+            { korean: "나는 말한다.", german: ["Ich sage"] },
+            { korean: "나는 통화한다.", german: ["Ich telefoniere"] },
+            { korean: "나는 가지고 있다.", german: ["Ich habe"] },
+            { korean: "너는 할 수 있다.", german: ["du kannst"] },
+            { korean: "너는 말한다.", german: ["du sagst"] },
+            { korean: "너는 통화한다.", german: ["du telefonierst"] },
+            { korean: "너는 가지고 있다.", german: ["du hast"] },
+            { korean: "그는 할 수 있다.", german: ["er kann"] },
+            { korean: "그녀는 할 수 있다.", german: ["sie kann"] },
+            { korean: "그는 말한다.", german: ["er sagt"] },
+            { korean: "그녀는 말한다.", german: ["sie sagt"] },
+            { korean: "그는 통화한다.", german: ["er telefoniert"] },
+            { korean: "그녀는 통화한다.", german: ["sie telefoniert"] },
+            { korean: "그는 가지고 있다.", german: ["er hat"] },
+            { korean: "그녀는 가지고 있다.", german: ["sie hat"] },
+            { korean: "우리는 할 수 있다.", german: ["wir können"] },
+            { korean: "우리는 말한다.", german: ["wir sagen"] },
+            { korean: "우리는 통화한다.", german: ["wir telefonieren"] },
+            { korean: "우리는 가지고 있다.", german: ["wir haben"] },
+            { korean: "너희들은 할 수 있다.", german: ["ihr könnt"] },
+            { korean: "너희들은 말한다.", german: ["ihr sagt"] },
+            { korean: "너희들은 통화한다.", german: ["ihr telefoniert"] },
+            { korean: "너희들은 가지고 있다.", german: ["ihr habt"] },
+            { korean: "그들은 할 수 있다.", german: ["sie können"] },
+            { korean: "당신은 할 수 있다.", german: ["Sie können"] },
+            { korean: "그들은 말한다.", german: ["sie sagen"] },
+            { korean: "당신은 말한다.", german: ["Sie sagen"] },
+            { korean: "그들은 통화한다.", german: ["sie telefonieren"] },
+            { korean: "당신은 통화한다.", german: ["Sie telefonieren"] },
+            { korean: "그들은 가지고 있다.", german: ["sie haben"] },
+            { korean: "당신은 가지고 있다.", german: ["Sie haben"] }
+        ];
+
+        // 기존 퀴즈 데이터는 모두 삭제하고 동사 변형 데이터만 남깁니다.
+        const quizData = verbQuizData;
+
+        // 괄호 안의 복수형을 제거한 단어를 추가하는 함수
+        function processQuizData() {
+            quizData.forEach(item => {
+                // 특정 문제들은 이미 객체로 정의되어 있으므로 건너뜁니다.
+                if (typeof item.german === 'object' && !Array.isArray(item.german)) return;
+
+                const mainAnswer = item.german[0];
+                const parenIndex = mainAnswer.indexOf('(');
+                if (parenIndex !== -1) {
+                    const baseWord = mainAnswer.substring(0, parenIndex);
+                    // 괄호 앞의 공백도 제거
+                    item.german.push(baseWord.trim());
+                }
+            });
+        }
+        processQuizData();
+
+        // DOM 요소들을 가져옵니다.
+        const quizSelectionArea = document.getElementById('quiz-selection-area');
+        const quizArea = document.getElementById('quiz-area');
+        const resultArea = document.getElementById('result-area');
+        const questionElement = document.getElementById('question');
+        const wordInfoElement = document.getElementById('word-info');
+        const answerInput = document.getElementById('answer-input');
+        const feedbackElement = document.getElementById('feedback');
+        const checkButton = document.getElementById('check-button');
+        const nextButton = document.getElementById('next-button');
+        const restartButton = document.getElementById('restart-button');
+        const scoreText = document.getElementById('score-text');
+        const progressText = document.getElementById('progress-text');
+        const micButton = document.getElementById('mic-button');
+        const micIcon = micButton.querySelector('i');
+        const micErrorMessage = document.getElementById('mic-error-message');
+
+        const writingQuizBtn = document.getElementById('writing-quiz-btn');
+        const speakingQuizBtn = document.getElementById('speaking-quiz-btn');
+
+        let currentQuestionIndex = 0;
+        let score = 0;
+        let quizType = ''; // 퀴즈 유형을 저장할 변수
+        let recognition; // 음성 인식 객체
+
+        // 퀴즈를 시작하는 함수
+        function startQuiz() {
+            quizData.sort(() => Math.random() - 0.5);
+            currentQuestionIndex = 0;
+            score = 0;
+            quizSelectionArea.classList.add('hidden');
+            quizArea.classList.remove('hidden');
+            resultArea.classList.add('hidden');
+            loadQuestion();
+            updateProgress();
+        }
+
+        // 다음 문제를 불러오는 함수
+        function loadQuestion() {
+            if (currentQuestionIndex < quizData.length) {
+                const currentQuestion = quizData[currentQuestionIndex];
+                questionElement.textContent = currentQuestion.korean;
+                wordInfoElement.textContent = "";
+                answerInput.value = '';
+                feedbackElement.textContent = '';
+                
+                // 마이크 오류 메시지 메시지 숨기기
+                micErrorMessage.classList.add('hidden');
+
+                // 퀴즈 유형에 따라 입력 필드와 마이크 버튼 활성화/비활성화
+                if (quizType === 'writing') {
+                    answerInput.disabled = false;
+                    micButton.disabled = true;
+                    micButton.style.display = 'none'; // 마이크 버튼 숨기기
+                } else if (quizType === 'speaking') {
+                    answerInput.disabled = false;
+                    micButton.disabled = false;
+                    micButton.style.display = 'flex'; // 마이크 버튼 보이기
+                }
+                
+                checkButton.disabled = false;
+                checkButton.classList.remove('bg-gray-400', 'cursor-not-allowed');
+                checkButton.classList.add('bg-blue-600', 'hover:bg-blue-700', 'transform', 'hover:scale-105');
+                nextButton.disabled = true;
+                nextButton.classList.remove('bg-blue-600', 'hover:bg-blue-700', 'transform', 'hover:scale-105');
+                nextButton.classList.add('bg-gray-400', 'cursor-not-allowed');
+                answerInput.focus();
+            } else {
+                showResult();
+            }
+        }
+
+        // 정답을 확인하는 함수
+        function checkAnswer() {
+            const currentQuestion = quizData[currentQuestionIndex];
+            
+            let correctAnswers;
+            // 퀴즈 데이터가 객체로 정의된 경우(writing, speaking 구분)
+            if (typeof currentQuestion.german === 'object' && !Array.isArray(currentQuestion.german)) {
+                correctAnswers = (quizType === 'speaking') ? currentQuestion.german.speaking : currentQuestion.german.writing;
+            } else {
+                correctAnswers = currentQuestion.german;
+            }
+
+            let isCorrect = false;
+
+            if (quizType === 'writing') {
+                // 작문 퀴즈: 대소문자 및 구두점까지 정확하게 비교합니다.
+                // 단, 정답이 소문자로 시작할 경우, 첫 글자를 대문자로 입력해도 정답으로 인정합니다.
+                const userInput = answerInput.value.trim();
+                isCorrect = correctAnswers.some(ans => {
+                    const trimmedAns = ans.trim();
+                    // 1. 완벽하게 일치하는지 확인
+                    if (trimmedAns === userInput) {
+                        return true;
+                    }
+                    // 2. 정답이 소문자로 시작할 경우, 사용자 입력의 첫 글자가 대문자인 경우도 허용
+                    if (trimmedAns.length > 0 && trimmedAns.charAt(0) === trimmedAns.charAt(0).toLowerCase() && trimmedAns.charAt(0) !== trimmedAns.charAt(0).toUpperCase()) {
+                        const capitalizedAns = trimmedAns.charAt(0).toUpperCase() + trimmedAns.slice(1);
+                        if (capitalizedAns === userInput) {
+                            return true;
+                        }
+                    }
+                    return false;
+                });
+            } else {
+                // 말하기 퀴즈: 띄어쓰기, 대소문자, 특수문자 및 중복 단어 무시
+                const userInput = answerInput.value.trim().toLowerCase();
+                const uniqueWords = [...new Set(userInput.split(/\s+/))];
+                const cleanedUniqueUserInput = uniqueWords.join('').replace(/[\s.,?!-/]/g, '');
+
+                isCorrect = correctAnswers.some(ans => {
+                    const cleanedCorrectAnswer = ans.toLowerCase().replace(/[\s.,?!-/]/g, '');
+                    return cleanedCorrectAnswer === cleanedUniqueUserInput;
+                });
+            }
+
+            if (isCorrect) {
+                feedbackElement.textContent = '정답입니다! 😊';
+                feedbackElement.classList.remove('text-red-500');
+                feedbackElement.classList.add('text-green-600');
+                score++;
+            } else {
+                // 모든 가능한 정답을 보여주기 위해 정답 배열을 합칩니다.
+                let displayAnswers = [];
+                // 퀴즈 데이터가 객체로 정의된 경우
+                if (typeof currentQuestion.german === 'object' && !Array.isArray(currentQuestion.german)) {
+                    displayAnswers = currentQuestion.german.writing.concat(currentQuestion.german.speaking);
+                } else {
+                    displayAnswers = currentQuestion.german;
+                }
+                feedbackElement.textContent = `틀렸습니다. 정답: ${displayAnswers.join(' 또는 ')}`;
+                feedbackElement.classList.remove('text-green-600');
+                feedbackElement.classList.add('text-red-500');
+            }
+
+            wordInfoElement.textContent = currentQuestion.info || '';
+
+            answerInput.disabled = true;
+            checkButton.disabled = true;
+            checkButton.classList.remove('bg-blue-600', 'hover:bg-blue-700', 'transform', 'hover:scale-105');
+            checkButton.classList.add('bg-gray-400', 'cursor-not-allowed');
+            nextButton.disabled = false;
+            nextButton.classList.remove('bg-gray-400', 'cursor-not-allowed');
+            nextButton.classList.add('bg-blue-600', 'hover:bg-blue-700', 'transform', 'hover:scale-105');
+        }
+
+        // 퀴즈 진행 상태를 업데이트하는 함수
+        function updateProgress() {
+            progressText.textContent = `문제 ${currentQuestionIndex + 1} / ${quizData.length}`;
+            if (currentQuestionIndex >= quizData.length) {
+                progressText.textContent = `퀴즈 완료!`;
+            }
+        }
+        
+        // 최종 결과를 표시하는 함수
+        function showResult() {
+            quizArea.classList.add('hidden');
+            resultArea.classList.remove('hidden');
+            scoreText.textContent = `점수: ${score} / ${quizData.length}`;
+        }
+        
+        // 음성 인식 설정 및 이벤트 핸들러
+        if ('webkitSpeechRecognition' in window) {
+            recognition = new webkitSpeechRecognition();
+            recognition.lang = 'de-DE'; // 독일어 설정
+            recognition.interimResults = false;
+            recognition.maxAlternatives = 1;
+
+            micButton.addEventListener('click', () => {
+                // 마이크가 이미 켜져 있다면 다시 끄기
+                if (micButton.classList.contains('bg-red-600')) {
+                    recognition.stop();
+                } else {
+                    recognition.start();
+                }
+            });
+
+            recognition.onstart = () => {
+                micButton.classList.add('bg-red-600', 'animate-pulse-white');
+                micIcon.classList.add('fa-beat');
+                micButton.title = '녹음 중... 다시 누르면 중지합니다.';
+                answerInput.placeholder = '말씀하세요...';
+            };
+
+            recognition.onresult = (event) => {
+                const speechResult = event.results[0][0].transcript;
+                answerInput.value = speechResult;
+                checkAnswer(); // 음성 인식이 완료되면 자동으로 정답 확인
+            };
+
+            recognition.onend = () => {
+                micButton.classList.remove('bg-red-600', 'animate-pulse-white');
+                micIcon.classList.remove('fa-beat');
+                micButton.title = '';
+                answerInput.placeholder = '정답을 입력하세요';
+            };
+
+            recognition.onerror = (event) => {
+                micButton.classList.remove('bg-red-600', 'animate-pulse-white');
+                micIcon.classList.remove('fa-beat');
+                micButton.title = '';
+                // 오류가 발생하면 입력 필드를 활성화합니다.
+                answerInput.disabled = false;
+                micErrorMessage.textContent = `마이크가 정상적으로 작동하지 않습니다. 키보드로 정답을 입력해 주세요.`;
+                micErrorMessage.classList.remove('hidden');
+                console.error('Speech recognition error:', event.error);
+            };
+        } else {
+            // 브라우저가 음성 인식을 지원하지 않을 경우
+            micButton.disabled = true;
+            micButton.style.display = 'none';
+            micErrorMessage.textContent = '현재 브라우저에서는 음성 인식을 지원하지 않습니다. "작문 퀴즈"를 이용해 주세요.';
+            micErrorMessage.classList.remove('hidden');
+            console.warn('Web Speech API is not supported in this browser.');
+        }
+
+        // 이벤트 리스너를 추가합니다.
+        checkButton.addEventListener('click', checkAnswer);
+        nextButton.addEventListener('click', () => {
+            currentQuestionIndex++;
+            loadQuestion();
+            updateProgress();
+        });
+        restartButton.addEventListener('click', () => {
+            quizArea.classList.add('hidden');
+            resultArea.classList.add('hidden');
+            quizSelectionArea.classList.remove('hidden');
+            // 재시작 시 마이크 버튼 다시 보이게 설정
+            if ('webkitSpeechRecognition' in window) {
+                micButton.style.display = 'flex';
+                micErrorMessage.classList.add('hidden');
+            }
+        });
+        
+        writingQuizBtn.addEventListener('click', () => {
+            quizType = 'writing';
+            startQuiz();
+        });
+        
+        speakingQuizBtn.addEventListener('click', () => {
+            quizType = 'speaking';
+            startQuiz();
+        });
+
+        // 문서 전체에서 Enter 키를 감지하여 동작을 제어합니다.
+        document.addEventListener('keyup', (e) => {
+            if (e.key === 'Enter' && !quizArea.classList.contains('hidden')) {
+                // 입력 필드가 활성화되어 있고 확인 버튼이 비활성화되지 않았다면 정답 확인
+                if (!answerInput.disabled && !checkButton.disabled) {
+                    checkAnswer();
+                // 다음 문제로 넘어가는 버튼이 활성화되어 있다면 다음 문제로 이동
+                } else if (!nextButton.disabled) {
+                    currentQuestionIndex++;
+                    loadQuestion();
+                    updateProgress();
+                }
+            }
+        });
+    </script>
+</body>
+</html>
