@@ -34,7 +34,7 @@
     <div id="quiz-container" class="bg-white p-8 rounded-3xl shadow-2xl max-w-lg w-full flex flex-col items-center text-center space-y-8">
         <!-- 퀴즈 제목 -->
         <div class="w-full">
-            <h1 class="text-4xl font-bold text-slate-800">가격 읽기 연습합시다!</h1>
+            <h1 class="text-4xl font-bold text-slate-800">가격 읽기 연습 퀴즈</h1>
         </div>
 
         <!-- 퀴즈 유형 선택 영역 -->
@@ -99,16 +99,16 @@
 
     <script>
         const quizData = [
-            { korean: "2,38 €", german: ["zwei Euro achtunddreißig"] },
-            { korean: "15,99 €", german: ["fünfzehn Euro neunundneunzig"] },
-            { korean: "80,50 €", german: ["achtzig Euro fünfzig"] },
-            { korean: "6,05 €", german: ["sechs Euro fünf"] },
-            { korean: "34,12 €", german: ["vierunddreißig Euro zwölf"] },
-            { korean: "48,70 €", german: ["achtundvierzig Euro siebzig"] },
-            { korean: "91,01 €", german: ["einundneunzig Euro eins"] },
-            { korean: "7,45 €", german: ["sieben Euro fünfundvierzig"] },
-            { korean: "53,00 €", german: ["dreiundfünfzig Euro"] },
-            { korean: "10,25 €", german: ["zehn Euro fünfundzwanzig"] }
+            { korean: "2,38 €", german: ["zwei Euro achtunddreißig", "2,38€", "2.38€"] },
+            { korean: "15,99 €", german: ["fünfzehn Euro neunundneunzig", "15,99€", "15.99€"] },
+            { korean: "80,50 €", german: ["achtzig Euro fünfzig", "80,50€", "80.50€"] },
+            { korean: "6,05 €", german: ["sechs Euro fünf", "6,05€", "6.05€"] },
+            { korean: "34,12 €", german: ["vierunddreißig Euro zwölf", "34,12€", "34.12€"] },
+            { korean: "48,70 €", german: ["achtundvierzig Euro siebzig", "48,70€", "48.70€"] },
+            { korean: "91,01 €", german: ["einundneunzig Euro eins", "91,01€", "91.01€"] },
+            { korean: "7,45 €", german: ["sieben Euro fünfundvierzig", "7,45€", "7.45€"] },
+            { korean: "53,00 €", german: ["dreiundfünfzig Euro", "53,00€", "53.00€"] },
+            { korean: "10,25 €", german: ["zehn Euro fünfundzwanzig", "10,25€", "10.25€"] }
         ];
         
         // DOM 요소들을 가져옵니다.
@@ -140,6 +140,11 @@
         let mediaRecorder; // 미디어 레코더 객체
         let audioChunks = []; // 녹음된 오디오 청크를 저장할 배열
         let audioBlob = null; // 최종 오디오 Blob
+
+        // 문자열을 정규화하는 함수 (소문자 변환 및 공백, 구두점, 유로 기호 제거)
+        function normalizeString(str) {
+            return str.toLowerCase().replace(/[\s.,?!€]/g, '');
+        }
 
         // 퀴즈를 시작하는 함수
         function startQuiz() {
@@ -207,27 +212,9 @@
             let isCorrect = false;
             let userInput = answerInput.value.trim();
             
-            if (quizType === 'writing') {
-                isCorrect = correctAnswers.some(ans => {
-                    const trimmedAns = ans.trim();
-                    if (trimmedAns === userInput) {
-                        return true;
-                    }
-                    if (trimmedAns.length > 0 && trimmedAns.charAt(0) === trimmedAns.charAt(0).toLowerCase() && trimmedAns.charAt(0) !== trimmedAns.charAt(0).toUpperCase()) {
-                        const capitalizedAns = trimmedAns.charAt(0).toUpperCase() + trimmedAns.slice(1);
-                        if (capitalizedAns === userInput) {
-                            return true;
-                        }
-                    }
-                    return false;
-                });
-            } else { // speaking quiz
-                const cleanedUserInput = userInput.toLowerCase().replace(/[\s.,?!-/]/g, '');
-                isCorrect = correctAnswers.some(ans => {
-                    const cleanedCorrectAnswer = ans.toLowerCase().replace(/[\s.,?!-/]/g, '');
-                    return cleanedCorrectAnswer === cleanedUserInput;
-                });
-            }
+            // 모든 답안과 사용자 입력을 정규화하여 비교
+            const normalizedUserInput = normalizeString(userInput);
+            isCorrect = correctAnswers.some(ans => normalizeString(ans) === normalizedUserInput);
 
             if (isCorrect) {
                 feedbackElement.textContent = '정답입니다! 😊';
