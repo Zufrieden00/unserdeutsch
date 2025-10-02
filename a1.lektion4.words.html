@@ -3,10 +3,10 @@
 <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Lektion 4 단어 퀴즈</title>
+    <title>독일어 단어 퀴즈</title>
     <!-- Inter 폰트와 Tailwind CSS를 로드합니다 -->
     <script src="https://cdn.tailwindcss.com"></script>
-    <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap">
+    <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700;800&display=swap">
     <style>
         body {
             font-family: 'Inter', sans-serif;
@@ -14,104 +14,128 @@
         /* 마이크 버튼 애니메이션을 위한 키프레임 */
         @keyframes pulse {
             0% {
-                box-shadow: 0 0 0 0 rgba(100, 116, 139, 0.7);
+                box-shadow: 0 0 0 0 rgba(255, 255, 255, 0.7);
             }
             70% {
-                box-shadow: 0 0 0 10px rgba(100, 116, 139, 0);
+                box-shadow: 0 0 0 14px rgba(255, 255, 255, 0);
             }
             100% {
-                box-shadow: 0 0 0 0 rgba(100, 116, 139, 0);
+                box-shadow: 0 0 0 0 rgba(255, 255, 255, 0);
             }
         }
-        .animate-pulse-gray {
+        .animate-pulse-white {
             animation: pulse 1.5s infinite;
         }
     </style>
     <!-- Font Awesome 아이콘을 로드합니다 -->
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.1.1/css/all.min.css">
 </head>
-<body class="bg-slate-100 flex items-center justify-center min-h-screen p-4">
-    <div id="quiz-container" class="bg-white p-8 rounded-3xl shadow-2xl max-w-lg w-full flex flex-col items-center text-center space-y-8">
+<body class="bg-gray-100 flex items-center justify-center min-h-screen p-4">
+    <div id="quiz-container" class="bg-white p-8 md:p-10 rounded-3xl shadow-2xl max-w-lg w-full flex flex-col items-center text-center space-y-8 border border-gray-200">
         <!-- 퀴즈 제목 -->
         <div class="w-full">
-            <h1 class="text-4xl font-bold text-slate-800">독일어 단어 퀴즈</h1>
+            <h1 class="text-4xl font-extrabold text-violet-700">독일어 단어 퀴즈</h1>
         </div>
 
         <!-- 퀴즈 유형 선택 영역 -->
         <div id="quiz-selection-area" class="w-full space-y-6">
-            <h2 class="text-2xl font-semibold text-slate-700">퀴즈 유형을 선택하세요.</h2>
+            <h2 class="text-2xl font-semibold text-gray-700">퀴즈 유형을 선택하세요.</h2>
             <div class="flex flex-col space-y-4">
-                <button id="writing-quiz-btn" class="bg-slate-700 hover:bg-slate-800 text-white font-bold py-4 px-8 rounded-2xl shadow-lg transition-all duration-200 transform hover:scale-105">작문 퀴즈</button>
-                <button id="speaking-quiz-btn" class="bg-teal-600 hover:bg-teal-700 text-white font-bold py-4 px-8 rounded-2xl shadow-lg transition-all duration-200 transform hover:scale-105">말하기 퀴즈</button>
+                <button id="writing-quiz-btn" class="bg-violet-600 hover:bg-violet-700 text-white font-bold py-4 px-8 rounded-2xl shadow-lg transition-all duration-200 transform hover:scale-[1.02]">
+                    <i class="fas fa-keyboard mr-2"></i> 작문 퀴즈
+                </button>
+                <button id="speaking-quiz-btn" class="bg-emerald-600 hover:bg-emerald-700 text-white font-bold py-4 px-8 rounded-2xl shadow-lg transition-all duration-200 transform hover:scale-[1.02]">
+                    <i class="fas fa-headset mr-2"></i> 말하기 퀴즈
+                </button>
             </div>
         </div>
 
         <!-- 퀴즈 진행 상태 및 결과 -->
         <div id="quiz-area" class="hidden w-full space-y-6">
-            <p id="progress-text" class="text-sm text-slate-500 mt-2">문제 0 / 0</p>
-            <!-- 질문 표시 영역 -->
-            <div class="bg-gray-100 rounded-2xl p-6 transition-colors duration-300 w-full">
-                <p id="question" class="text-2xl font-semibold text-slate-800">문제를 불러오는 중...</p>
+            <p id="progress-text" class="text-sm text-gray-500 mt-2">문제 0 / 0</p>
+            <!-- 질문 표시 영역: 가독성 개선 -->
+            <div class="h-24 flex flex-col items-center justify-center bg-violet-50 rounded-xl p-4 transition-colors duration-300 shadow-inner">
+                <p id="question" class="text-2xl font-bold text-gray-800">문제를 불러오는 중...</p>
+                <p id="word-info" class="text-xs text-gray-500 mt-2 h-4"></p>
             </div>
             
-            <!-- 단어 정보 표시 영역 (정답 확인 후 보여짐) -->
-            <p id="word-info" class="text-sm text-slate-500 h-6"></p>
-
-            <!-- 사용자 입력 필드 -->
-            <div class="relative w-full">
-                <input type="text" id="answer-input" placeholder="정답을 입력하세요" class="w-full p-4 pr-16 text-lg rounded-2xl border-2 border-gray-300 focus:border-slate-500 focus:outline-none transition-all duration-200 shadow-inner">
-                <button id="mic-button" class="absolute right-4 top-1/2 -translate-y-1/2 p-2 rounded-full w-12 h-12 flex items-center justify-center bg-slate-600 text-white hover:bg-slate-700 transition-colors duration-200 shadow-md">
+            <!-- 사용자 입력 필드 및 마이크 버튼 (STT 전용) -->
+            <div class="relative w-full mt-4">
+                <!-- pr-20 으로 마이크 버튼 공간 확보 -->
+                <input type="text" id="answer-input" placeholder="정답을 입력하세요" class="w-full p-4 pr-20 text-xl rounded-2xl border-2 border-violet-300 focus:border-violet-600 focus:outline-none transition-all duration-200 shadow-md">
+                <!-- 이 마이크 버튼은 STT(음성 인식) 전용입니다. -->
+                <button id="mic-button" class="absolute right-3 top-1/2 -translate-y-1/2 p-2 rounded-full w-12 h-12 flex items-center justify-center bg-violet-600 text-white hover:bg-violet-700 transition-colors duration-200 shadow-lg" title="음성 인식 시작 (정답 입력)">
                     <i class="fas fa-microphone text-xl"></i>
                 </button>
             </div>
             
             <!-- 마이크 오류 메시지 영역 -->
-            <p id="mic-error-message" class="text-sm text-red-500 hidden"></p>
+            <p id="mic-error-message" class="text-sm text-red-600 font-medium hidden text-left w-full"></p>
 
             <!-- 피드백 메시지 영역 -->
-            <p id="feedback" class="text-lg h-8 font-bold"></p>
+            <p id="feedback" class="text-lg h-8 font-extrabold"></p>
+            <div id="user-speech-feedback" class="hidden w-full text-center mt-2">
+                <p class="text-sm text-gray-500">
+                    시스템이 인식한 발음: 
+                    <span id="recognized-speech" class="text-gray-800 font-semibold"></span>
+                </p>
+            </div>
             
-            <!-- 버튼 그룹 -->
-            <div class="flex flex-col space-y-4 w-full">
-                <!-- 첫 번째 줄: 듣고 따라하기 & 내 녹음 듣기 -->
-                <div class="flex flex-wrap justify-center gap-2 sm:gap-4 w-full">
-                    <button id="listen-button" class="bg-sky-600 hover:bg-sky-700 text-white font-bold py-4 px-8 rounded-2xl shadow-lg transition-all duration-200 transform hover:scale-105 hidden">
-                        <i class="fas fa-volume-up mr-2"></i>듣고 따라하기
-                    </button>
-                    <button id="play-recording-btn" class="bg-sky-600 hover:bg-sky-700 text-white font-bold py-4 px-8 rounded-2xl shadow-lg cursor-not-allowed transition-all duration-200" disabled>내 녹음 듣기</button>
-                </div>
-                
-                <!-- 두 번째 줄: 확인 & 다음 문제 -->
-                <div class="flex flex-wrap justify-center gap-2 sm:gap-4 w-full">
-                    <button id="check-button" class="bg-teal-600 hover:bg-teal-700 text-white font-bold py-4 px-8 rounded-2xl shadow-lg transition-all duration-200 transform hover:scale-105">확인</button>
-                    <button id="next-button" class="bg-slate-600 hover:bg-slate-700 text-white font-bold py-4 px-8 rounded-2xl shadow-lg cursor-not-allowed transition-all duration-200" disabled>다음 문제</button>
-                </div>
+            <!-- 버튼 그룹 (확인/다음) -->
+            <div class="flex space-x-4 justify-center pt-2">
+                <button id="check-button" class="bg-violet-600 hover:bg-violet-700 text-white font-bold py-4 px-6 rounded-2xl shadow-lg transition-all duration-200 transform hover:scale-105">
+                    <i class="fas fa-check mr-2"></i> 확인
+                </button>
+                <button id="next-button" class="bg-gray-400 text-white font-bold py-4 px-6 rounded-2xl shadow-lg cursor-not-allowed transition-all duration-200" disabled>
+                    <i class="fas fa-arrow-right mr-2"></i> 다음 문제
+                </button>
+            </div>
+
+            <!-- 발음 비교 및 녹음 버튼 그룹 (정답 확인 후 표시) -->
+            <div id="playback-buttons" class="flex flex-wrap gap-3 justify-center pt-2 hidden">
+                <button id="native-listen-button" class="bg-cyan-600 hover:bg-cyan-700 text-white font-bold py-3 px-5 rounded-xl transition-all duration-200 transform hover:scale-105">
+                    <i class="fas fa-volume-up mr-2"></i> 원어민 발음 듣기
+                </button>
+                <!-- 녹음 시작/중지 버튼 -->
+                <button id="record-new-button" class="bg-red-500 hover:bg-red-600 text-white font-bold py-3 px-5 rounded-xl transition-all duration-200 transform hover:scale-105">
+                    <i class="fas fa-microphone mr-2"></i> 녹음하기
+                </button>
+                <!-- 내 발음 듣기 버튼 -->
+                <button id="user-listen-button" class="bg-rose-500 text-white font-bold py-3 px-5 rounded-xl transition-all duration-200 transform hover:scale-105 cursor-not-allowed disabled:opacity-50" disabled>
+                    <i class="fas fa-headphones mr-2"></i> 내 발음 듣기
+                </button>
             </div>
         </div>
 
         <!-- 최종 결과 표시 영역 -->
         <div id="result-area" class="hidden w-full space-y-6">
-            <h2 class="text-3xl font-bold text-slate-800">퀴즈 완료! 🎉</h2>
-            <p id="score-text" class="text-2xl text-slate-700">점수: ${score} / ${quizData.length}</p>
-            <button id="restart-button" class="bg-sky-600 hover:bg-sky-700 text-white font-bold py-4 px-8 rounded-2xl shadow-lg transition-all duration-200 transform hover:scale-105">다시 시작</button>
+            <h2 class="text-3xl font-bold text-violet-700">퀴즈 완료! 🎉</h2>
+            <p id="score-text" class="text-2xl text-gray-700">점수: 0 / 0</p>
+            <button id="restart-button" class="bg-lime-600 hover:bg-lime-700 text-white font-bold py-4 px-8 rounded-2xl shadow-lg transition-all duration-200 transform hover:scale-105">
+                <i class="fas fa-redo-alt mr-2"></i> 다시 시작
+            </button>
         </div>
     </div>
 
     <script>
+        // 단어 리스트 정의
         const quizData = [
-            { korean: "커피", german: ["der Kaffee"] },
+            // Beverages (음료)
+            { korean: "커피 (단수)", german: ["der Kaffee"] },
             { korean: "콜라 (단수)", german: ["die Cola"] },
             { korean: "콜라 (복수)", german: ["die Colas"] },
             { korean: "차 (단수)", german: ["der Tee"] },
             { korean: "차 (복수)", german: ["die Tees"] },
-            { korean: "사과주스 (단수)", german: ["der Apfelsaft"] },
-            { korean: "사과주스 (복수)", german: ["die Apfelsäfte"] },
-            { korean: "우유", german: ["die Milch"] },
-            { korean: "물", german: ["das Wasser"] },
+            { korean: "사과 주스 (단수)", german: ["der Apfelsaft"] },
+            { korean: "사과 주스 (복수)", german: ["die Apfelsäfte"] },
+            { korean: "우유 (단수)", german: ["die Milch"] },
+            { korean: "물 (단수)", german: ["das Wasser"] },
             { korean: "주스 (단수)", german: ["der Saft"] },
             { korean: "주스 (복수)", german: ["die Säfte"] },
             { korean: "음료 (단수)", german: ["das Getränk"] },
             { korean: "음료 (복수)", german: ["die Getränke"] },
+
+            // Food (음식)
             { korean: "음식 (단수)", german: ["die Speise"] },
             { korean: "음식 (복수)", german: ["die Speisen"] },
             { korean: "케이크 (단수)", german: ["der Kuchen"] },
@@ -126,38 +150,46 @@
             { korean: "작은 빵 (복수)", german: ["die Brötchen"] },
             { korean: "브레첼 (단수)", german: ["die Brezel"] },
             { korean: "브레첼 (복수)", german: ["die Brezeln"] },
-            { korean: "치즈", german: ["der Käse"] },
+            { korean: "치즈 (단수)", german: ["der Käse"] },
             { korean: "햄 (단수)", german: ["der Schinken"] },
             { korean: "햄 (복수)", german: ["die Schinken"] },
-            { korean: "과일", german: ["das Obst"] },
+            { korean: "과일 (단수)", german: ["das Obst"] },
             { korean: "사과 (단수)", german: ["der Apfel"] },
             { korean: "사과 (복수)", german: ["die Äpfel"] },
             { korean: "바나나 (단수)", german: ["die Banane"] },
             { korean: "바나나 (복수)", german: ["die Bananen"] },
             { korean: "키위 (단수)", german: ["die Kiwi"] },
             { korean: "키위 (복수)", german: ["die Kiwis"] },
-            { korean: "설탕", german: ["der Zucker"] },
+            { korean: "설탕 (단수)", german: ["der Zucker"] },
+
+            // Places / People / Concepts (장소/사람/개념)
             { korean: "카페테리아 (단수)", german: ["die Cafeteria"] },
             { korean: "카페테리아 (복수)", german: ["die Cafeterias"] },
             { korean: "유리잔 (단수)", german: ["das Glas"] },
             { korean: "유리잔 (복수)", german: ["die Gläser"] },
-            { korean: "종업원, 서비스 (단수)", german: ["die Bedienung"] },
-            { korean: "종업원, 서비스 (복수)", german: ["die Bedienungen"] },
+            { korean: "종업원 (단수)", german: ["die Bedienung"] },
+            { korean: "종업원 (복수)", german: ["die Bedienungen"] },
             { korean: "손님 (단수)", german: ["der Gast"] },
             { korean: "손님 (복수)", german: ["die Gäste"] },
             { korean: "축제 (단수)", german: ["das Fest"] },
             { korean: "축제 (복수)", german: ["die Feste"] },
             { korean: "언어수업 (단수)", german: ["der Sprachkurs"] },
             { korean: "언어수업 (복수)", german: ["die Sprachkurse"] },
-            { korean: "유로", german: ["der Euro"] },
-            { korean: "센트", german: ["der Cent"] },
+            { korean: "유로 (단수)", german: ["der Euro"] },
+            { korean: "유로 (복수)", german: ["die Euro"] },
+            { korean: "센트 (단수)", german: ["der Cent"] },
+            { korean: "센트 (복수)", german: ["die Cent"] },
             { korean: "퇴근 (단수)", german: ["der Feierabend"] },
             { korean: "퇴근 (복수)", german: ["die Feierabende"] },
+
+            // Phrases / Verbs (구문/동사)
             { korean: "쉬다", german: ["frei haben"] },
-            { korean: "곧 봐요", german: ["Bis bald"] },
+            { korean: "곧 봐요(기약 없는 '곧', 형식적인 인사)", german: ["Bis bald"] },
             { korean: "재밌게 보내!", german: ["Viel Spaß!"] },
             { korean: "서울에서 안부를 전해요.", german: ["Viele Grüße aus Seoul."] },
             { korean: "파티를 열다", german: ["ein Fest machen"] },
+
+            // Adjectives / Adverbs (형용사/부사)
             { korean: "맛있는", german: ["lecker"] },
             { korean: "피곤한", german: ["müde"] },
             { korean: "오늘", german: ["heute"] },
@@ -169,7 +201,25 @@
             { korean: "많은", german: ["viel"] },
             { korean: "또는", german: ["oder"] },
         ];
-        
+
+        // 퀴즈 데이터 전처리 함수 (복수형 괄호 제거)
+        function processQuizData() {
+            // 이 함수는 quizData를 재구성했기 때문에 이제는 사실상 필요 없지만, 구조 유지를 위해 남겨둡니다.
+            quizData.forEach(item => {
+                if (Array.isArray(item.german)) {
+                    const mainAnswer = item.german[0];
+                    const parenIndex = mainAnswer.indexOf('(');
+                    if (parenIndex !== -1) {
+                        const baseWord = mainAnswer.substring(0, parenIndex).trim();
+                        if (baseWord.length > 0) {
+                            // 현재는 이미 단수/복수로 분리되어 있으므로 추가 로직이 필요 없습니다.
+                        }
+                    }
+                }
+            });
+        }
+        processQuizData();
+
         // DOM 요소들을 가져옵니다.
         const quizSelectionArea = document.getElementById('quiz-selection-area');
         const quizArea = document.getElementById('quiz-area');
@@ -180,28 +230,118 @@
         const feedbackElement = document.getElementById('feedback');
         const checkButton = document.getElementById('check-button');
         const nextButton = document.getElementById('next-button');
-        const listenButton = document.getElementById('listen-button');
-        const playRecordingBtn = document.getElementById('play-recording-btn');
         const restartButton = document.getElementById('restart-button');
         const scoreText = document.getElementById('score-text');
         const progressText = document.getElementById('progress-text');
         const micButton = document.getElementById('mic-button');
-        const micIcon = micButton.querySelector('i');
+        const micIcon = micButton ? micButton.querySelector('i') : null; // NULL Check
         const micErrorMessage = document.getElementById('mic-error-message');
+        const userSpeechFeedback = document.getElementById('user-speech-feedback');
+        const recognizedSpeech = document.getElementById('recognized-speech');
+        
+        // 재생 및 녹음 관련 DOM 요소
+        const playbackButtons = document.getElementById('playback-buttons');
+        const nativeListenButton = document.getElementById('native-listen-button');
+        const recordNewButton = document.getElementById('record-new-button');
+        const userListenButton = document.getElementById('user-listen-button');
 
         const writingQuizBtn = document.getElementById('writing-quiz-btn');
         const speakingQuizBtn = document.getElementById('speaking-quiz-btn');
 
         let currentQuestionIndex = 0;
         let score = 0;
-        let quizType = ''; // 퀴즈 유형을 저장할 변수
+        let quizType = '';
         let recognition; // 음성 인식 객체
-        let mediaRecorder; // 미디어 레코더 객체
-        let audioChunks = []; // 녹음된 오디오 청크를 저장할 배열
-        let audioBlob = null; // 최종 오디오 Blob
+
+        // --- 녹음 기능 관련 변수 ---
+        let mediaRecorder;
+        let audioChunks = [];
+        let userAudioUrl = null;
+
+        // 사용자 미디어(마이크) 권한 및 MediaRecorder 설정 함수
+        function setupRecorder() {
+            navigator.mediaDevices.getUserMedia({ audio: true })
+                .then(stream => {
+                    mediaRecorder = new MediaRecorder(stream);
+                    
+                    mediaRecorder.ondataavailable = event => {
+                        audioChunks.push(event.data);
+                    };
+
+                    mediaRecorder.onstart = () => {
+                        if (recordNewButton) { // NULL check
+                            // 녹음 시작 시 UI 변경
+                            recordNewButton.textContent = '녹음 중지';
+                            // 녹음 중에는 회색 배경 + 흰색 펄스
+                            recordNewButton.classList.remove('bg-red-500', 'hover:bg-red-600'); 
+                            recordNewButton.classList.add('bg-gray-700', 'animate-pulse-white');
+                            recordNewButton.querySelector('i')?.classList.remove('fa-microphone'); // Safe access
+                            recordNewButton.querySelector('i')?.classList.add('fa-stop-circle');
+                            
+                            // 녹음 중에는 다른 버튼 비활성화
+                            if (nativeListenButton) nativeListenButton.disabled = true; // NULL check
+                            if (userListenButton) userListenButton.disabled = true; // NULL check
+                        }
+                    };
+
+                    mediaRecorder.onstop = () => {
+                        // 녹음 중지 시 UI 변경
+                        if (recordNewButton) { // NULL check
+                            recordNewButton.textContent = '녹음 다시하기';
+                            recordNewButton.classList.remove('bg-gray-700', 'animate-pulse-white');
+                            // 녹음 완료 후 다시 빨간색 계열로 복귀
+                            recordNewButton.classList.add('bg-red-500', 'hover:bg-red-600');
+                            recordNewButton.querySelector('i')?.classList.remove('fa-stop-circle'); // Safe access
+                            recordNewButton.querySelector('i')?.classList.add('fa-microphone');
+                        }
+
+                        // 녹음이 끝나면 Blob을 생성하고 URL을 얻습니다.
+                        const audioBlob = new Blob(audioChunks, { type: 'audio/webm' });
+                        if (userAudioUrl) URL.revokeObjectURL(userAudioUrl); // 이전 URL 해제
+                        userAudioUrl = URL.createObjectURL(audioBlob);
+                        audioChunks = []; // 청크 초기화
+                        
+                        if (userListenButton) { // NULL check
+                            // 녹음이 완료되면 내 발음 듣기 버튼 활성화
+                            userListenButton.disabled = false;
+                            userListenButton.classList.remove('cursor-not-allowed', 'disabled:opacity-50');
+                            userListenButton.classList.add('hover:bg-rose-600');
+                        }
+                        
+                        if (nativeListenButton) nativeListenButton.disabled = false; // NULL check
+                    };
+                })
+                .catch(err => {
+                    console.error('마이크 접근 오류:', err);
+                    handleMicError(true, '마이크 권한을 허용해야 말하기 퀴즈를 사용할 수 있습니다. 페이지를 새로고침하고 권한을 허용해 주세요.');
+                });
+        }
+        
+        // 마이크 오류 처리 함수
+        function handleMicError(isCritical, message) {
+            if (isCritical) {
+                if (speakingQuizBtn) {
+                    speakingQuizBtn.disabled = true;
+                    speakingQuizBtn.textContent = '말하기 퀴즈 (마이크 접근 불가)';
+                    speakingQuizBtn.classList.remove('bg-emerald-600', 'hover:bg-emerald-700'); // 변경된 색상
+                    speakingQuizBtn.classList.add('bg-gray-400');
+                }
+            }
+            // STT 마이크 및 녹음 마이크 모두 숨김
+            if (micButton) micButton.style.display = 'none';
+            if (recordNewButton) recordNewButton.style.display = 'none'; 
+            if (micErrorMessage) {
+                micErrorMessage.textContent = message;
+                micErrorMessage.classList.remove('hidden');
+            }
+        }
+
+        // 페이지 로드 시 레코더를 미리 설정합니다.
+        setupRecorder();
 
         // 퀴즈를 시작하는 함수
         function startQuiz() {
+            // 퀴즈 데이터 섞기
             quizData.sort(() => Math.random() - 0.5);
             
             currentQuestionIndex = 0;
@@ -222,35 +362,70 @@
                 answerInput.value = '';
                 feedbackElement.textContent = '';
                 
-                // 마이크 오류 메시지 메시지 숨기기
-                micErrorMessage.classList.add('hidden');
-                
-                // 오디오 블롭 초기화 및 '내 녹음 듣기' 버튼 비활성화
-                audioBlob = null;
-                playRecordingBtn.disabled = true;
-                playRecordingBtn.classList.add('bg-gray-400', 'cursor-not-allowed');
-                playRecordingBtn.classList.remove('bg-sky-600', 'hover:bg-sky-700', 'transform', 'hover:scale-105');
+                if (micErrorMessage) micErrorMessage.classList.add('hidden');
+                if (userSpeechFeedback) userSpeechFeedback.classList.add('hidden');
 
-                // 퀴즈 유형에 따라 입력 필드와 마이크, 녹음 버튼 활성화/비활성화
+                // --- 녹음/재생 관련 초기화 ---
+                if (playbackButtons) playbackButtons.classList.add('hidden'); // NULL check
+                userAudioUrl = null;
+                
+                if (recordNewButton) { // NULL Check
+                    // 녹음 버튼 초기화
+                    recordNewButton.textContent = '녹음하기';
+                    recordNewButton.classList.remove('bg-gray-700', 'animate-pulse-white');
+                    recordNewButton.classList.add('bg-red-500', 'hover:bg-red-600'); // 변경된 색상
+                    
+                    const recordIcon = recordNewButton.querySelector('i');
+                    if (recordIcon) { // 아이콘 NULL check
+                        recordIcon.classList.remove('fa-stop-circle');
+                        recordIcon.classList.add('fa-microphone');
+                    }
+                }
+
+                if (userListenButton) { // NULL Check
+                    // 내 발음 듣기 버튼 비활성화
+                    userListenButton.disabled = true;
+                    userListenButton.classList.add('cursor-not-allowed', 'disabled:opacity-50');
+                    userListenButton.classList.remove('hover:bg-rose-600'); // 변경된 색상
+                }
+                
+                if (nativeListenButton) { // NULL Check
+                    nativeListenButton.disabled = false;
+                }
+
+                // 퀴즈 유형에 따라 STT 마이크 버튼 활성화/비활성화
                 if (quizType === 'writing') {
                     answerInput.disabled = false;
-                    micButton.disabled = true;
-                    micButton.style.display = 'none'; // 마이크 버튼 숨기기
-                    playRecordingBtn.style.display = 'none'; // '내 녹음 듣기' 버튼 숨기기
+                    if (micButton) {
+                        micButton.disabled = true;
+                        micButton.style.display = 'none'; // STT Mic Hidden
+                    }
+                    // 녹음/재생 버튼은 checkAnswer에서 표시되므로, 여기서는 별도 제어하지 않음.
+                    answerInput.classList.remove('pr-20'); 
+                    answerInput.classList.add('pr-4'); // Input field full width
+
                 } else if (quizType === 'speaking') {
                     answerInput.disabled = false;
-                    micButton.disabled = false;
-                    micButton.style.display = 'flex'; // 마이크 버튼 보이기
-                    playRecordingBtn.style.display = 'flex'; // '내 녹음 듣기' 버튼 보이기
+                    
+                    // 마이크 접근에 성공했을 때만 STT 버튼을 보이게 합니다.
+                    if (recognition && mediaRecorder && micButton) { 
+                        micButton.disabled = false;
+                        micButton.style.display = 'flex'; // STT Mic Visible
+                    } else if (speakingQuizBtn.disabled && micButton) {
+                         // 마이크 오류로 인해 이미 버튼이 비활성화된 상태면 STT 마이크 숨김
+                        micButton.style.display = 'none';
+                    }
+                    // 녹음/재생 버튼은 checkAnswer에서 표시되므로, 여기서는 별도 제어하지 않음.
+                    answerInput.classList.remove('pr-4'); 
+                    answerInput.classList.add('pr-20'); // Input field shrinks for STT mic
                 }
                 
                 checkButton.disabled = false;
                 checkButton.classList.remove('bg-gray-400', 'cursor-not-allowed');
-                checkButton.classList.add('bg-teal-600', 'hover:bg-teal-700', 'transform', 'hover:scale-105');
+                checkButton.classList.add('bg-violet-600', 'hover:bg-violet-700', 'transform', 'hover:scale-105'); // 변경된 색상
                 nextButton.disabled = true;
-                nextButton.classList.remove('bg-slate-600', 'hover:bg-slate-700', 'transform', 'hover:scale-105');
+                nextButton.classList.remove('bg-violet-600', 'hover:bg-violet-700', 'transform', 'hover:scale-105'); // 변경된 색상
                 nextButton.classList.add('bg-gray-400', 'cursor-not-allowed');
-                listenButton.classList.add('hidden');
                 answerInput.focus();
             } else {
                 showResult();
@@ -261,58 +436,66 @@
         function checkAnswer() {
             const currentQuestion = quizData[currentQuestionIndex];
             
-            let correctAnswers = Array.isArray(currentQuestion.german) ? currentQuestion.german : [currentQuestion.german.writing];
+            let correctAnswers = Array.isArray(currentQuestion.german) ? currentQuestion.german : [currentQuestion.german[0]];
 
             let isCorrect = false;
             let userInput = answerInput.value.trim();
             
-            if (quizType === 'writing') {
-                isCorrect = correctAnswers.some(ans => {
-                    const trimmedAns = ans.trim();
-                    if (trimmedAns === userInput) {
-                        return true;
-                    }
-                    if (trimmedAns.length > 0 && trimmedAns.charAt(0) === trimmedAns.charAt(0).toLowerCase() && trimmedAns.charAt(0) !== trimmedAns.charAt(0).toUpperCase()) {
-                        const capitalizedAns = trimmedAns.charAt(0).toUpperCase() + trimmedAns.slice(1);
-                        if (capitalizedAns === userInput) {
-                            return true;
-                        }
-                    }
-                    return false;
-                });
-            } else { // speaking quiz
-                const cleanedUserInput = userInput.toLowerCase().replace(/[\s.,?!-/]/g, '');
-                isCorrect = correctAnswers.some(ans => {
+            // 정답 체크 로직
+            isCorrect = correctAnswers.some(ans => {
+                const trimmedAns = ans.trim();
+                // 대소문자 무시 비교
+                if (trimmedAns.toLowerCase() === userInput.toLowerCase()) return true;
+
+                // 첫 글자 대문자 허용 비교 (독일어 명사/문장 시작)
+                if (quizType === 'writing' && trimmedAns.length > 0) {
+                     const capitalizedAns = trimmedAns.charAt(0).toUpperCase() + trimmedAns.slice(1);
+                     if (capitalizedAns === userInput) return true;
+                }
+                // 말하기 퀴즈는 공백/구두점 무시 비교
+                if (quizType === 'speaking') {
+                    const cleanedUserInput = userInput.toLowerCase().replace(/[\s.,?!-/]/g, '');
                     const cleanedCorrectAnswer = ans.toLowerCase().replace(/[\s.,?!-/]/g, '');
                     return cleanedCorrectAnswer === cleanedUserInput;
-                });
+                }
+                return false;
+            });
+
+            // 말하기 퀴즈에서만 음성 인식 피드백 표시
+            if (quizType === 'speaking') {
+                if (recognizedSpeech) recognizedSpeech.textContent = userInput;
+                if (userSpeechFeedback) userSpeechFeedback.classList.remove('hidden');
             }
 
             if (isCorrect) {
                 feedbackElement.textContent = '정답입니다! 😊';
-                feedbackElement.classList.remove('text-red-500');
+                feedbackElement.classList.remove('text-red-600');
                 feedbackElement.classList.add('text-green-600');
                 score++;
             } else {
                 let displayAnswers = correctAnswers;
                 feedbackElement.textContent = `틀렸습니다. 정답: ${displayAnswers.join(' 또는 ')}`;
                 feedbackElement.classList.remove('text-green-600');
-                feedbackElement.classList.add('text-red-500');
+                feedbackElement.classList.add('text-red-600');
             }
 
             wordInfoElement.textContent = currentQuestion.info || '';
 
+            // 모든 퀴즈 유형에서 정답 확인 후 발음 연습 버튼을 표시합니다.
+            if (playbackButtons) {
+                playbackButtons.classList.remove('hidden');
+            }
+            
             answerInput.disabled = true;
             checkButton.disabled = true;
-            checkButton.classList.remove('bg-teal-600', 'hover:bg-teal-700', 'transform', 'hover:scale-105');
+            checkButton.classList.remove('bg-violet-600', 'hover:bg-violet-700', 'transform', 'hover:scale-105'); // 변경된 색상
             checkButton.classList.add('bg-gray-400', 'cursor-not-allowed');
             nextButton.disabled = false;
             nextButton.classList.remove('bg-gray-400', 'cursor-not-allowed');
-            nextButton.classList.add('bg-slate-600', 'hover:bg-slate-700', 'transform', 'hover:scale-105');
-            listenButton.classList.remove('hidden'); // 정답 확인 후 '듣고 따라하기' 버튼 보이게
+            nextButton.classList.add('bg-violet-600', 'hover:bg-violet-700', 'transform', 'hover:scale-105'); // 변경된 색상
         }
 
-        // 퀴즈 진행 상태를 업데이트하는 함수
+        // 퀴즈 진행 상태 업데이트
         function updateProgress() {
             progressText.textContent = `문제 ${currentQuestionIndex + 1} / ${quizData.length}`;
             if (currentQuestionIndex >= quizData.length) {
@@ -320,175 +503,174 @@
             }
         }
         
-        // 최종 결과를 표시하는 함수
+        // 최종 결과 표시
         function showResult() {
             quizArea.classList.add('hidden');
             resultArea.classList.remove('hidden');
             scoreText.textContent = `점수: ${score} / ${quizData.length}`;
         }
         
-        // 독일어 발음 기능을 위한 함수
+        // 원어민 발음 재생 함수 (Text-to-Speech)
         function speakGerman() {
             if ('speechSynthesis' in window) {
                 const currentQuestion = quizData[currentQuestionIndex];
-                const textToSpeak = Array.isArray(currentQuestion.german) ? currentQuestion.german[0] : currentQuestion.german.writing; // 첫 번째 정답을 발음
+                const textToSpeak = Array.isArray(currentQuestion.german) ? currentQuestion.german[0] : currentQuestion.german[0]; // 첫 번째 정답을 발음
                 const utterance = new SpeechSynthesisUtterance(textToSpeak);
                 utterance.lang = 'de-DE'; // 독일어 설정
                 window.speechSynthesis.speak(utterance);
             } else {
-                listenButton.textContent = '음성 지원 안됨';
                 console.error('Text-to-speech not supported in this browser.');
-            }
-        }
-
-        // '내 녹음 듣기' 버튼을 위한 함수
-        function playRecording() {
-            if (audioBlob) {
-                const audioUrl = URL.createObjectURL(audioBlob);
-                const audio = new Audio(audioUrl);
-                audio.play();
-                // 오디오 재생이 끝나면 URL 해제
-                audio.addEventListener('ended', () => {
-                    URL.revokeObjectURL(audioUrl);
-                });
-            } else {
-                // 오디오가 없을 경우 메시지 표시
-                feedbackElement.textContent = '재생할 녹음이 없습니다.';
-                feedbackElement.classList.add('text-red-500');
+                // alert() 대신 메시지 표시
+                feedbackElement.textContent = '⚠️ 음성 합성을 지원하지 않는 브라우저입니다.';
                 feedbackElement.classList.remove('text-green-600');
+                feedbackElement.classList.add('text-red-600');
+            }
+        }
+        
+        // 내 발음 재생 함수
+        function playUserAudio() {
+            if (userAudioUrl) {
+                const audio = new Audio(userAudioUrl);
+                audio.play();
+            } else {
+                // 내 발음 듣기 버튼이 활성화되지 않았다면 경고
+                feedbackElement.textContent = '⚠️ 먼저 녹음하기 버튼을 눌러 발음을 녹음해 주세요.';
+                feedbackElement.classList.remove('text-green-600');
+                feedbackElement.classList.add('text-red-600');
+                console.warn('사용자 녹음 파일이 없습니다.');
             }
         }
 
-        // 음성 인식 및 녹음 설정
-        if ('webkitSpeechRecognition' in window && navigator.mediaDevices) {
-            // 음성 인식 API 설정
+        // --- 1. STT (음성 인식) 전용 핸들러 ---
+        if ('webkitSpeechRecognition' in window) {
             recognition = new webkitSpeechRecognition();
-            recognition.lang = 'de-DE';
+            recognition.lang = 'de-DE'; // 독일어 설정
             recognition.interimResults = false;
             recognition.maxAlternatives = 1;
 
-            // 미디어 레코더 설정
-            navigator.mediaDevices.getUserMedia({ audio: true })
-                .then(stream => {
-                    mediaRecorder = new MediaRecorder(stream);
-                    
-                    mediaRecorder.ondataavailable = event => {
-                        audioChunks.push(event.data);
-                    };
+            // STT 마이크 버튼 클릭 이벤트: 음성 인식 시작/중지
+            if (micButton) {
+                micButton.addEventListener('click', () => {
+                    if (quizType !== 'speaking') return;
 
-                    mediaRecorder.onstop = () => {
-                        audioBlob = new Blob(audioChunks, { type: 'audio/webm' });
-                        audioChunks = [];
-                        
-                        // 녹음이 완료되면 '내 녹음 듣기' 버튼 활성화
-                        playRecordingBtn.disabled = false;
-                        playRecordingBtn.classList.remove('bg-gray-400', 'cursor-not-allowed');
-                        playRecordingBtn.classList.add('bg-sky-600', 'hover:bg-sky-700', 'transform', 'hover:scale-105');
-                    };
-
-                    micButton.addEventListener('click', () => {
-                        if (mediaRecorder.state === 'recording') {
-                            // 녹음 중일 때 버튼을 다시 누르면 중지
-                            recognition.stop();
-                        } else {
-                            // 녹음 시작
-                            audioBlob = null;
-                            audioChunks = [];
-                            mediaRecorder.start();
-                            recognition.start();
-                        }
-                    });
-                })
-                .catch(err => {
-                    console.error('마이크 접근 오류:', err);
-                    micErrorMessage.textContent = '마이크 접근 권한이 없어 녹음 기능을 사용할 수 없습니다. "작문 퀴즈"를 이용해 주세요.';
-                    micErrorMessage.classList.remove('hidden');
-                    micButton.disabled = true;
-                    micButton.style.display = 'none';
-                    playRecordingBtn.style.display = 'none';
+                    if (micButton.classList.contains('bg-red-600')) {
+                        recognition.stop();
+                    } else {
+                        recognition.start(); 
+                    }
                 });
+            }
 
             recognition.onstart = () => {
-                micButton.classList.add('bg-red-600', 'animate-pulse-gray');
-                micIcon.classList.add('fa-beat');
-                micButton.title = '녹음 중... 다시 누르면 중지합니다.';
-                answerInput.placeholder = '말씀하세요...';
+                if (micButton && micIcon) {
+                    // 녹음 시작 시 빨간색(STT는 녹음이 아니므로 녹음 상태의 빨간색 대신 조금 더 밝은 빨간색 사용)
+                    micButton.classList.remove('bg-violet-600', 'hover:bg-violet-700');
+                    micButton.classList.add('bg-red-600', 'animate-pulse-white');
+                    micIcon.classList.add('fa-beat');
+                    micButton.title = '음성 인식 중... 다시 누르면 중지합니다.';
+                    answerInput.placeholder = '말씀하세요...';
+                }
             };
 
             recognition.onresult = (event) => {
                 const speechResult = event.results[0][0].transcript;
                 answerInput.value = speechResult;
+                checkAnswer(); // 음성 인식 완료 후 정답 확인
             };
 
             recognition.onend = () => {
-                // 음성 인식이 끝날 때 녹음도 함께 중지
-                if (mediaRecorder.state === 'recording') {
-                    mediaRecorder.stop();
-                }
-
-                micButton.classList.remove('bg-red-600', 'animate-pulse-gray');
-                micIcon.classList.remove('fa-beat');
-                micButton.title = '';
-                answerInput.placeholder = '정답을 입력하세요';
-                
-                // 음성 인식이 완료되면 자동으로 정답 확인
-                if (quizType === 'speaking') {
-                    checkAnswer();
+                if (micButton && micIcon) {
+                    // 음성 인식 끝, 기본 보라색으로 복귀
+                    micButton.classList.remove('bg-red-600', 'animate-pulse-white');
+                    micButton.classList.add('bg-violet-600', 'hover:bg-violet-700');
+                    micIcon.classList.remove('fa-beat');
+                    micButton.title = '음성 인식 시작 (정답 입력)';
+                    answerInput.placeholder = '정답을 입력하세요';
                 }
             };
 
             recognition.onerror = (event) => {
-                micButton.classList.remove('bg-red-600', 'animate-pulse-gray');
-                micIcon.classList.remove('fa-beat');
-                micButton.title = '';
-                answerInput.placeholder = '정답을 입력하세요';
-                micErrorMessage.textContent = `마이크가 정상적으로 작동하지 않습니다. 키보드로 정답을 입력해 주세요.`;
-                micErrorMessage.classList.remove('hidden');
+                if (micButton && micIcon) {
+                    micButton.classList.remove('bg-red-600', 'animate-pulse-white');
+                    micButton.classList.add('bg-violet-600', 'hover:bg-violet-700');
+                    micIcon.classList.remove('fa-beat');
+                    micButton.title = '음성 인식 시작 (정답 입력)';
+                }
+                
+                answerInput.disabled = false;
+                if (micErrorMessage) {
+                    micErrorMessage.textContent = `음성 인식 오류. (오류: ${event.error})`;
+                    micErrorMessage.classList.remove('hidden');
+                }
                 console.error('Speech recognition error:', event.error);
             };
-
         } else {
             // 브라우저가 음성 인식을 지원하지 않을 경우
-            micButton.disabled = true;
-            micButton.style.display = 'none';
-            playRecordingBtn.disabled = true;
-            playRecordingBtn.style.display = 'none';
-            micErrorMessage.textContent = '현재 브라우저에서는 음성 인식을 지원하지 않습니다. "작문 퀴즈"를 이용해 주세요.';
-            micErrorMessage.classList.remove('hidden');
-            console.warn('Web Speech API or MediaRecorder is not supported in this browser.');
+            handleMicError(true, '현재 브라우저에서는 음성 인식/녹음 기능을 지원하지 않습니다. "작문 퀴즈"를 이용해 주세요.');
+        }
+
+        // --- 2. 녹음 시작/중지 핸들러 ---
+        if (recordNewButton) { // NULL Check
+            recordNewButton.addEventListener('click', () => {
+                if (!mediaRecorder) {
+                    handleMicError(false, '마이크 장치에 접근할 수 없어 녹음할 수 없습니다. 페이지를 새로고침하여 권한을 허용해 주세요.');
+                    return;
+                }
+                
+                if (mediaRecorder.state === 'recording') {
+                    mediaRecorder.stop();
+                } else {
+                    audioChunks = []; // 새 녹음 시작 전 청크 초기화
+                    mediaRecorder.start();
+                }
+            });
         }
 
         // 이벤트 리스너를 추가합니다.
-        checkButton.addEventListener('click', checkAnswer);
-        nextButton.addEventListener('click', () => {
-            currentQuestionIndex++;
-            loadQuestion();
-            updateProgress();
-        });
-        listenButton.addEventListener('click', speakGerman);
-        playRecordingBtn.addEventListener('click', playRecording);
-        restartButton.addEventListener('click', () => {
-            quizArea.classList.add('hidden');
-            resultArea.classList.add('hidden');
-            quizSelectionArea.classList.remove('hidden');
-        });
+        if (checkButton) checkButton.addEventListener('click', checkAnswer);
+        if (nextButton) {
+            nextButton.addEventListener('click', () => {
+                currentQuestionIndex++;
+                loadQuestion();
+                updateProgress();
+            });
+        }
         
-        writingQuizBtn.addEventListener('click', () => {
-            quizType = 'writing';
-            startQuiz();
-        });
-        
-        speakingQuizBtn.addEventListener('click', () => {
-            quizType = 'speaking';
-            startQuiz();
-        });
+        if (nativeListenButton) nativeListenButton.addEventListener('click', speakGerman); 
+        if (userListenButton) userListenButton.addEventListener('click', playUserAudio);
 
+        if (restartButton) {
+            restartButton.addEventListener('click', () => {
+                quizArea.classList.add('hidden');
+                resultArea.classList.add('hidden');
+                quizSelectionArea.classList.remove('hidden');
+                
+                if (micButton) micButton.style.display = 'none';
+                if (micErrorMessage) micErrorMessage.classList.add('hidden');
+                if (playbackButtons) playbackButtons.classList.add('hidden'); 
+                
+                // 재시작 시 녹음 버튼의 숨김 상태를 복구 (speaking 퀴즈를 다시 선택할 수 있도록)
+                if (recordNewButton) recordNewButton.style.display = 'inline-flex';
+            });
+        }
+        
+        // 초기 화면 설정 (퀴즈 시작 버튼이 눌리기 전)
+        window.onload = () => {
+             // 퀴즈 시작 버튼에 startQuiz 연결
+             if (writingQuizBtn) {
+                 writingQuizBtn.addEventListener('click', () => { quizType = 'writing'; startQuiz(); });
+             }
+             if (speakingQuizBtn) {
+                 speakingQuizBtn.addEventListener('click', () => { quizType = 'speaking'; startQuiz(); });
+             }
+        };
+        
         // 문서 전체에서 Enter 키를 감지하여 동작을 제어합니다.
         document.addEventListener('keyup', (e) => {
             if (e.key === 'Enter' && !quizArea.classList.contains('hidden')) {
-                if (!answerInput.disabled && !checkButton.disabled) {
+                if (!answerInput.disabled && checkButton && !checkButton.disabled) {
                     checkAnswer();
-                } else if (!nextButton.disabled) {
+                } else if (nextButton && !nextButton.disabled) {
                     currentQuestionIndex++;
                     loadQuestion();
                     updateProgress();
