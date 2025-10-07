@@ -298,43 +298,49 @@
             
             // 가능한 모든 정답 (배열 형태)
             let correctAnswers = Array.isArray(currentQuestion.german) ? currentQuestion.german : [currentQuestion.german[0]];
+            // 독일어 철자로 된 정답 (인덱스 0은 항상 철자 정답이라고 가정)
+            const primaryWordAnswer = correctAnswers[0];
+
 
             let isCorrect = false;
             let userInput = answerInput.value.trim();
             
             if (isVoiceInput) {
-                // 1. 음성 입력 (Voice Input): 대소문자, 끝 구두점 무시 (유연한 체크)
+                // 1. 음성 입력 (Voice Input): STT의 부정확함을 고려하여 유연하게 체크
                 const cleanUserInput = normalizeVoiceInput(userInput);
 
                 isCorrect = correctAnswers.some(ans => {
                     const cleanAns = normalizeVoiceInput(ans);
-                    return cleanAns === cleanUserInput;
+
+                    // a. 철자 정답 비교
+                    if (ans === primaryWordAnswer) {
+                        return cleanAns === cleanUserInput;
+                    } 
+                    
+                    // b. 숫자/기호 형태 정답 비교 (STT 유연성 확보)
+                    // STT는 공백을 일관성 있게 처리하지 못하므로, 숫자/기호 정답은 공백을 제거하고 비교합니다.
+                    const cleanNumberInputNoSpace = cleanUserInput.replace(/\s/g, '');
+                    const cleanAnsNoSpace = cleanAns.replace(/\s/g, '');
+                    
+                    // 예: "7,45 €" (input) vs "7,45€" (ans) => "7,45€" vs "7,45€" (match)
+                    return cleanAnsNoSpace === cleanNumberInputNoSpace;
                 });
                 
             } else {
-                // 2. 키보드 입력 (Keyboard Input): 대소문자 구별하지 않지만, 정확한 철자와 띄어쓰기 요구 (엄격한 체크)
-                isCorrect = correctAnswers.some(ans => {
-                    const trimmedAns = ans.trim();
-                    
-                    // a. 완벽한 일치 (대소문자 무시)
-                    if (trimmedAns.toLowerCase() === userInput.toLowerCase()) return true;
+                // 2. 키보드 입력 (Keyboard Input): '단어 퀴즈' 목표에 맞게 오직 철자 정답만 허용합니다.
+                
+                // a. 대소문자 무시한 완벽 일치 체크
+                if (primaryWordAnswer.toLowerCase() === userInput.toLowerCase()) {
+                    isCorrect = true;
+                }
+                
+                // b. 독일어 명사를 위한 첫 글자 대문자 허용 비교
+                if (!isCorrect && primaryWordAnswer.length > 0) {
+                     const capitalizedAns = primaryWordAnswer.charAt(0).toUpperCase() + primaryWordAnswer.slice(1);
+                     if (capitalizedAns === userInput) isCorrect = true;
+                }
 
-                    // b. 명사/문장 시작을 위한 첫 글자 대문자 허용 비교 
-                    if (trimmedAns.length > 0) {
-                         const capitalizedAns = trimmedAns.charAt(0).toUpperCase() + trimmedAns.slice(1);
-                         if (capitalizedAns === userInput) return true;
-                    }
-
-                    // c. 숫자/기호 입력에 대한 처리 (대소문자 무시, 공백 무시)
-                    // 숫자 입력은 STT와는 달리 철자 대신 기호로 입력할 수 있도록 추가 허용
-                    const cleanNumberInput = userInput.replace(/\s/g, '').toLowerCase();
-
-                    // 정답 배열에 숫자/기호 형태의 정답이 포함되어 있는지 확인합니다.
-                    // 이 퀴즈 데이터에서는 german 배열에 숫자 형태가 포함되어 있으므로 이 로직이 작동합니다.
-                    if (correctAnswers.some(ans => ans.replace(/\s/g, '').toLowerCase() === cleanNumberInput)) return true;
-                    
-                    return false;
-                });
+                // 숫자/기호 입력은 단어 학습을 피하는 것이므로 명시적으로 제외합니다. (기존 로직 제거됨)
             }
 
 
@@ -344,10 +350,8 @@
                 feedbackElement.classList.add('text-green-600');
                 score++;
             } else {
-                // *** 사용자 요청 반영: 틀렸을 때 독일어 철자 정답만 보여줍니다. ***
-                const primaryGermanAnswer = Array.isArray(currentQuestion.german) ? currentQuestion.german[0] : currentQuestion.german;
-
-                feedbackElement.textContent = `틀렸습니다. 정답: ${primaryGermanAnswer}`;
+                // 사용자 요청 반영: 틀렸을 때 독일어 철자 정답만 보여줍니다.
+                feedbackElement.textContent = `틀렸습니다. 정답: ${primaryWordAnswer}`;
                 feedbackElement.classList.remove('text-green-600');
                 feedbackElement.classList.add('text-red-600');
             }
