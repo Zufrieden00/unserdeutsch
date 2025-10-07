@@ -109,7 +109,7 @@
         // Web Speech API 지원 여부 확인
         const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
         let recognition = null;
-        let isRecognizing = false;
+        let isRecognizing = false; // 음성 인식 API 사용 상태
         let isAnswered = false; // 문제를 맞혔는지 여부 상태
         if (SpeechRecognition) {
             recognition = new SpeechRecognition();
@@ -118,7 +118,7 @@
             recognition.interimResults = false;
         }
         
-        // MediaRecorder를 이용한 사용자 음성 녹음
+        // MediaRecorder를 이용한 사용자 음성 녹음 (연습용)
         let mediaRecorder = null;
         let audioChunks = [];
         let recordedAudioBlob = null;
@@ -134,6 +134,7 @@
         }
 
         function normalizeSpeechText(text) {
+            // 구두점, 공백 제거 후 소문자로 변환 (채점용)
             return text.toLowerCase().replace(/[^\p{L}\p{N}]/gu, '');
         }
 
@@ -289,6 +290,7 @@
                             <button id="practice-record-btn" class="text-purple-400 hover:text-purple-300 transition-colors duration-200">
                                 <i class="fas fa-microphone text-2xl"></i>
                             </button>
+                            <!-- 요청에 따라 텍스트를 "연습 녹음"으로 변경 -->
                             <span class="text-sm text-gray-400 ml-2" id="practice-btn-text">연습 녹음</span>
                         </div>
                     </div>
@@ -358,11 +360,16 @@
             }, 0);
         }
 
-        // 말하기 퀴즈용 녹음 시작
+        // 말하기 퀴즈용 음성 인식 시작 (녹음 없이)
         function startRecording() {
-            if (!recognition || isRecognizing) {
+            if (!recognition) {
+                showMessageBox('죄송합니다. 이 브라우저에서는 음성 인식을 지원하지 않습니다.');
                 return;
             }
+            if (isRecognizing) {
+                return;
+            }
+
             isRecognizing = true;
             const recordBtn = document.getElementById('record-btn');
             const speechText = document.getElementById('speech-text');
@@ -370,43 +377,21 @@
             recordBtn.classList.add('listening');
             speechText.textContent = '말씀해 주세요...';
             
-            audioChunks = [];
-            recordedAudioBlob = null;
-            navigator.mediaDevices.getUserMedia({ audio: true })
-                .then(stream => {
-                    mediaRecorder = new MediaRecorder(stream);
-                    mediaRecorder.ondataavailable = event => {
-                        audioChunks.push(event.data);
-                    };
-                    mediaRecorder.onstop = () => {
-                        recordedAudioBlob = new Blob(audioChunks, { 'type' : 'audio/webm; codecs=opus' });
-                    };
-                    mediaRecorder.start();
-                })
-                .catch(err => {
-                    showMessageBox('마이크 접근 권한이 필요합니다.');
-                    console.error('Error accessing microphone:', err);
-                    recordBtn.classList.remove('listening');
-                    isRecognizing = false;
-                });
+            // 메인 퀴즈 녹음 시에는 MediaRecorder를 사용하지 않음 (오직 SpeechRecognition만 사용)
+            recordedAudioBlob = null; 
 
             recognition.onresult = (event) => {
                 const transcript = event.results[0][0].transcript;
                 speechText.textContent = transcript;
-                if (mediaRecorder && mediaRecorder.state === 'recording') {
-                    mediaRecorder.stop();
-                }
                 checkAnswer(transcript);
             };
 
             recognition.onerror = (event) => {
-                console.error(event.error);
+                console.error("Speech Recognition Error:", event.error);
                 recordBtn.classList.remove('listening');
-                speechText.textContent = '음성 인식 오류. 다시 시도해 주세요.';
+                speechText.textContent = '음성 인식 오류 또는 마이크 접근 권한 필요. 다시 시도해 주세요.';
+                showMessageBox('음성 인식 오류가 발생했습니다. 마이크 권한을 확인해 주세요.');
                 isRecognizing = false;
-                if (mediaRecorder && mediaRecorder.state === 'recording') {
-                    mediaRecorder.stop();
-                }
             };
             
             recognition.onend = () => {
@@ -417,7 +402,7 @@
             try {
                 recognition.start();
             } catch(e) {
-                console.error(e);
+                console.error("Speech Recognition Start Error:", e);
                 showMessageBox('음성 인식 시작에 실패했습니다. 마이크 권한을 확인해 주세요.');
                 recordBtn.classList.remove('listening');
                 speechText.textContent = '마이크 버튼을 누르고 답을 말하세요.';
@@ -425,7 +410,7 @@
             }
         }
         
-        // 연습 녹음 시작 및 중지 토글
+        // 연습 녹음 시작 및 중지 토글 (MediaRecorder만 사용)
         function togglePracticeRecording() {
             const practiceBtn = document.getElementById('practice-record-btn');
             const practiceBtnText = document.getElementById('practice-btn-text');
@@ -438,6 +423,8 @@
 
                 audioChunks = [];
                 recordedAudioBlob = null;
+
+                // MediaRecorder를 위해 마이크 접근 권한 요청
                 navigator.mediaDevices.getUserMedia({ audio: true })
                     .then(stream => {
                         mediaRecorder = new MediaRecorder(stream);
@@ -449,12 +436,14 @@
                             isPracticeRecording = false; // 녹음 중지 후 상태 재설정
                             practiceBtn.classList.remove('listening');
                             practiceBtnText.textContent = '연습 녹음';
+                            // 스트림 닫기
+                            stream.getTracks().forEach(track => track.stop());
                         };
                         mediaRecorder.start();
                     })
                     .catch(err => {
-                        showMessageBox('마이크 접근 권한이 필요합니다.');
-                        console.error('Error accessing microphone:', err);
+                        showMessageBox('연습 녹음을 위해 마이크 접근 권한이 필요합니다.');
+                        console.error('Error accessing microphone for practice recording:', err);
                         isPracticeRecording = false;
                         practiceBtn.classList.remove('listening');
                         practiceBtnText.textContent = '연습 녹음';
@@ -478,7 +467,7 @@
                     URL.revokeObjectURL(audioUrl);
                 };
             } else {
-                showMessageBox('녹음된 오디오가 없습니다.');
+                showMessageBox('연습 녹음된 오디오가 없습니다.');
             }
         }
 
@@ -527,6 +516,7 @@
                         answerFeedback.textContent = '아쉽지만 오답입니다. 😭';
                         answerFeedback.className = 'mt-4 text-lg font-bold text-red-400';
                     }
+                    // 메인 마이크 버튼 비활성화
                     document.getElementById('record-btn').disabled = true;
                 }
             }
