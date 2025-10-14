@@ -1,0 +1,817 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>독일어 단어 퀴즈</title>
+    <!-- Inter 폰트와 Tailwind CSS를 로드합니다 -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700;800&display=swap">
+    <style>
+        body {
+            font-family: 'Inter', sans-serif;
+        }
+        /* 마이크 버튼 위치를 조정하여 입력 필드와 잘 맞도록 합니다. */
+        #voice-input-button {
+            /* flex를 사용하여 아이콘을 중앙에 배치하고 hover 효과를 줍니다 */
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+        /* 녹음 중 애니메이션을 위한 키프레임 */
+        @keyframes pulse {
+          0%, 100% { opacity: 1; }
+          50% { opacity: 0.5; }
+        }
+        .animate-pulse {
+          animation: pulse 1.5s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+        }
+    </style>
+    <!-- Font Awesome 아이콘을 로드합니다 -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.1.1/css/all.min.css">
+</head>
+<body class="bg-gray-100 flex items-center justify-center min-h-screen p-4">
+    <div id="quiz-container" class="bg-white p-8 md:p-10 rounded-3xl shadow-2xl max-w-lg w-full flex flex-col items-center text-center space-y-8 border border-gray-200">
+        <!-- 퀴즈 제목 -->
+        <div class="w-full">
+            <h1 class="text-4xl font-extrabold text-violet-700">독일어 단어 퀴즈</h1>
+            <p class="text-sm text-gray-500 mt-1">한국어 표현을 독일어로 말하거나 입력하세요.</p>
+        </div>
+
+        <!-- 퀴즈 진행 상태 및 결과 -->
+        <div id="quiz-area" class="w-full space-y-6">
+            <p id="progress-text" class="text-sm text-gray-500 mt-2">문제 0 / 0</p>
+            <!-- 질문 표시 영역: 가독성 개선 -->
+            <div class="h-24 flex flex-col items-center justify-center bg-violet-50 rounded-xl p-4 transition-colors duration-300 shadow-inner">
+                <p id="question" class="text-3xl font-bold text-gray-800">문제를 불러오는 중...</p>
+                <!-- 단어 정보 (관사/복수형 등)는 표시하지 않음 -->
+                <p id="word-info" class="text-xs text-gray-500 mt-2 h-4"></p>
+            </div>
+            
+            <!-- 사용자 입력 필드 및 음성 입력 버튼 통합 -->
+            <div class="relative w-full mt-4">
+                <!-- input: 오른쪽에 아이콘 공간을 위해 pr-14를 추가합니다. -->
+                <input type="text" id="answer-input" placeholder="정답을 입력하세요" class="w-full p-4 pr-14 text-xl rounded-2xl border-2 border-violet-300 focus:border-violet-600 focus:outline-none transition-all duration-200 shadow-md">
+                
+                <!-- 음성 인식 버튼: absolute로 입력창 오른쪽에 배치합니다. -->
+                <button id="voice-input-button" class="absolute right-0 top-0 h-full w-14 bg-transparent text-zinc-500 hover:text-red-600 rounded-r-2xl transition-all duration-200 focus:outline-none" title="음성으로 정답 입력">
+                    <i class="fas fa-microphone text-xl"></i>
+                </button>
+            </div>
+            
+            <!-- 피드백 메시지 영역 -->
+            <p id="feedback" class="text-lg h-8 font-extrabold"></p>
+
+            <!-- 1. 발음 재생 및 녹음 버튼 -->
+            <div id="playback-buttons" class="flex gap-3 justify-center flex-wrap pt-2 hidden">
+                <!-- 원어민 발음 듣기 -->
+                <button id="native-listen-button" class="bg-cyan-600 hover:bg-cyan-700 text-white font-bold py-3 px-4 rounded-xl transition-all duration-200 transform hover:scale-105 text-sm md:text-base">
+                    <i class="fas fa-volume-up mr-1"></i> 듣기
+                </button>
+                <!-- 녹음 시작 -->
+                <button id="record-button" class="bg-red-500 hover:bg-red-600 text-white font-bold py-3 px-4 rounded-xl transition-all duration-200 transform hover:scale-105 text-sm md:text-base">
+                    <i class="fas fa-microphone mr-1"></i> 녹음
+                </button>
+                <!-- 내 발음 듣기 (재생) -->
+                <button id="my-pronunciation-button" class="bg-yellow-500 hover:bg-yellow-600 text-white font-bold py-3 px-4 rounded-xl transition-all duration-200 transform hover:scale-105 text-sm md:text-base disabled:opacity-50 disabled:cursor-not-allowed" disabled>
+                    <i class="fas fa-headphones mr-1"></i> 재생
+                </button>
+            </div>
+            
+            <!-- 2. 버튼 그룹 (확인/다음) -->
+            <div class="flex space-x-4 justify-center pt-2">
+                <button id="check-button" class="bg-violet-600 hover:bg-violet-700 text-white font-bold py-4 px-6 rounded-2xl shadow-lg transition-all duration-200 transform hover:scale-105">
+                    <i class="fas fa-check mr-2"></i> 확인
+                </button>
+                <button id="next-button" class="bg-gray-400 text-white font-bold py-4 px-6 rounded-2xl shadow-lg cursor-not-allowed transition-all duration-200" disabled>
+                    <i class="fas fa-arrow-right mr-2"></i> 다음 문제
+                </button>
+            </div>
+        </div>
+
+        <!-- 최종 결과 표시 영역 -->
+        <div id="result-area" class="hidden w-full space-y-6">
+            <h2 class="text-3xl font-bold text-violet-700">퀴즈 완료! 🎉</h2>
+            <p id="score-text" class="text-2xl text-gray-700">점수: 0 / 0</p>
+            <button id="restart-button" class="bg-lime-600 hover:bg-lime-700 text-white font-bold py-4 px-8 rounded-2xl shadow-lg transition-all duration-200 transform hover:scale-105">
+                <i class="fas fa-redo-alt mr-2"></i> 다시 시작
+            </button>
+        </div>
+    </div>
+
+    <script>
+        // 퀴즈 데이터 (그/그녀 문제를 분리하여 업데이트됨)
+        const quizData = [
+            // träumen (꿈꾸다)
+            { korean: "나는 꿈꾼다", german: ["Ich träume"] },
+            { korean: "너는 꿈꾼다", german: ["Du träumst"] },
+            { korean: "그는 꿈꾼다", german: ["Er träumt"] }, // 분리
+            { korean: "그녀는 꿈꾼다", german: ["Sie träumt"] }, // 분리
+            { korean: "우리는 꿈꾼다", german: ["Wir träumen"] },
+            { korean: "너희는 꿈꾼다", german: ["Ihr träumt"] },
+            { korean: "그들/당신들은 꿈꾼다", german: ["Sie träumen"] },
+
+            // schlafen (자다) - 불규칙 동사
+            { korean: "나는 잔다", german: ["Ich schlafe"] },
+            { korean: "너는 잔다", german: ["Du schläfst"] },
+            { korean: "그는 잔다", german: ["Er schläft"] }, // 분리
+            { korean: "그녀는 잔다", german: ["Sie schläft"] }, // 분리
+            { korean: "우리는 잔다", german: ["Wir schlafen"] },
+            { korean: "너희는 잔다", german: ["Ihr schlaft"] },
+            { korean: "그들/당신들은 잔다", german: ["Sie schlafen"] },
+
+            // aufwachen (깨어나다) - 분리 동사
+            { korean: "나는 깨어난다", german: ["Ich wache auf"] },
+            { korean: "너는 깨어난다", german: ["Du wachst auf"] },
+            { korean: "그는 깨어난다", german: ["Er wacht auf"] }, // 분리
+            { korean: "그녀는 깨어난다", german: ["Sie wacht auf"] }, // 분리
+            { korean: "우리는 깨어난다", german: ["Wir wachen auf"] },
+            { korean: "너희는 깨어난다", german: ["Ihr wacht auf"] },
+            { korean: "그들/당신들은 깨어난다", german: ["Sie wachen auf"] },
+
+            // ausschlafen (늦잠자다/충분히 자다) - 분리 동사, 불규칙 동사
+            { korean: "나는 늦잠잔다", german: ["Ich schlafe aus"] },
+            { korean: "너는 늦잠잔다", german: ["Du schläfst aus"] },
+            { korean: "그는 늦잠잔다", german: ["Er schläft aus"] }, // 분리
+            { korean: "그녀는 늦잠잔다", german: ["Sie schläfst aus"] }, // 분리
+            { korean: "우리는 늦잠잔다", german: ["Wir schlafen aus"] },
+            { korean: "너희는 늦잠잔다", german: ["Ihr schlaft aus"] },
+            { korean: "그들/당신들은 늦잠잔다", german: ["Sie schlafen aus"] },
+
+            // fernsehen (TV 보다) - 분리 동사, 불규칙 동사
+            { korean: "나는 TV를 본다", german: ["Ich sehe fern"] },
+            { korean: "너는 TV를 본다", german: ["Du siehst fern"] },
+            { korean: "그는 TV를 본다", german: ["Er sieht fern"] }, // 분리
+            { korean: "그녀는 TV를 본다", german: ["Sie sieht fern"] }, // 분리
+            { korean: "우리는 TV를 본다", german: ["Wir sehen fern"] },
+            { korean: "너희는 TV를 본다", german: ["Ihr seht fern"] },
+            { korean: "그들/당신들은 TV를 본다", german: ["Sie sehen fern"] },
+
+            // frühstücken (아침을 먹는다)
+            { korean: "나는 아침을 먹는다", german: ["Ich frühstücke"] },
+            { korean: "너는 아침을 먹는다", german: ["Du frühstückst"] },
+            { korean: "그는 아침을 먹는다", german: ["Er frühstückt"] }, // 분리
+            { korean: "그녀는 아침을 먹는다", german: ["Sie frühstückt"] }, // 분리
+            { korean: "우리는 아침을 먹는다", german: ["Wir frühstücken"] },
+            { korean: "너희는 아침을 먹는다", german: ["Ihr frühstückt"] },
+            { korean: "그들/당신들은 아침을 먹는다", german: ["Sie frühstücken"] },
+
+            // kochen (요리하다)
+            { korean: "나는 요리한다", german: ["Ich koche"] },
+            { korean: "너는 요리한다", german: ["Du kochst"] },
+            { korean: "그는 요리한다", german: ["Er kocht"] }, // 분리
+            { korean: "그녀는 요리한다", german: ["Sie kocht"] }, // 분리
+            { korean: "우리는 요리한다", german: ["Wir kochen"] },
+            { korean: "너희는 요리한다", german: ["Ihr kocht"] },
+            { korean: "그들/당신들은 요리한다", german: ["Sie kochen"] },
+
+            // backen (굽다) - 불규칙 동사
+            { korean: "나는 굽는다", german: ["Ich backe"] },
+            { korean: "너는 굽는다", german: ["Du bäckst"] },
+            { korean: "그는 굽는다", german: ["Er bäckt"] }, // 분리
+            { korean: "그녀는 굽는다", german: ["Sie bäckt"] }, // 분리
+            { korean: "우리는 굽는다", german: ["Wir backen"] },
+            { korean: "너희는 굽는다", german: ["Ihr backt"] },
+            { korean: "그들/당신들은 굽는다", german: ["Sie backen"] },
+
+            // waschen (씻다) - 불규칙 동사
+            { korean: "나는 씻는다", german: ["Ich wasche"] },
+            { korean: "너는 씻는다", german: ["Du wäschst"] },
+            { korean: "그는 씻는다", german: ["Er wäscht"] }, // 분리
+            { korean: "그녀는 씻는다", german: ["Sie wäscht"] }, // 분리
+            { korean: "우리는 씻는다", german: ["Wir waschen"] },
+            { korean: "너희는 씻는다", german: ["Ihr wascht"] },
+            { korean: "그들/당신들은 씻는다", german: ["Sie waschen"] },
+
+            // duschen (샤워하다)
+            { korean: "나는 샤워한다", german: ["Ich dusche"] },
+            { korean: "너는 샤워한다", german: ["Du duschst"] },
+            { korean: "그는 샤워한다", german: ["Er duscht"] }, // 분리
+            { korean: "그녀는 샤워한다", german: ["Sie duscht"] }, // 분리
+            { korean: "우리는 샤워한다", german: ["Wir duschen"] },
+            { korean: "너희는 샤워한다", german: ["Ihr duscht"] },
+            { korean: "그들/당신들은 샤워한다", german: ["Sie duschen"] },
+
+            // fahren (운전하다/타다) - 불규칙 동사
+            { korean: "나는 운전한다", german: ["Ich fahre"] },
+            { korean: "너는 운전한다", german: ["Du fährst"] },
+            { korean: "그는 운전한다", german: ["Er fährt"] }, // 분리
+            { korean: "그녀는 운전한다", german: ["Sie fährt"] }, // 분리
+            { korean: "우리는 운전한다", german: ["Wir fahren"] },
+            { korean: "너희는 운전한다", german: ["Ihr fahrt"] },
+            { korean: "그들/당신들은 운전한다", german: ["Sie fahren"] },
+
+            // gehen (가다/걷다)
+            { korean: "나는 간다", german: ["Ich gehe"] },
+            { korean: "너는 간다", german: ["Du gehst"] },
+            { korean: "그는 간다", german: ["Er geht"] }, // 분리
+            { korean: "그녀는 간다", german: ["Sie geht"] }, // 분리
+            { korean: "우리는 간다", german: ["Wir gehen"] },
+            { korean: "너희는 간다", german: ["Ihr geht"] },
+            { korean: "그들/당신들은 간다", german: ["Sie gehen"] },
+
+            // besuchen (방문하다)
+            { korean: "나는 방문한다", german: ["Ich besuche"] },
+            { korean: "너는 방문한다", german: ["Du besuchst"] },
+            { korean: "그는 방문한다", german: ["Er besucht"] }, // 분리
+            { korean: "그녀는 방문한다", german: ["Sie besucht"] }, // 분리
+            { korean: "우리는 방문한다", german: ["Wir besuchen"] },
+            { korean: "너희는 방문한다", german: ["Ihr besucht"] },
+            { korean: "그들/당신들은 방문한다", german: ["Sie besuchen"] },
+
+            // einkaufen (장보다/쇼핑하다) - 분리 동사
+            { korean: "나는 장 본다", german: ["Ich kaufe ein"] },
+            { korean: "너는 장 본다", german: ["Du kaufst ein"] },
+            { korean: "그는 장 본다", german: ["Er kauft ein"] }, // 분리
+            { korean: "그녀는 장 본다", german: ["Sie kauft ein"] }, // 분리
+            { korean: "우리는 장 본다", german: ["Wir kaufen ein"] },
+            { korean: "너희는 장 본다", german: ["Ihr kauft ein"] },
+            { korean: "그들/당신들은 장 본다", german: ["Sie kaufen ein"] },
+
+            // ausgehen (외출하다/데이트하다) - 분리 동사
+            { korean: "나는 외출한다", german: ["Ich gehe aus"] },
+            { korean: "너는 외출한다", german: ["Du gehst aus"] },
+            { korean: "그는 외출한다", german: ["Er geht aus"] }, // 분리
+            { korean: "그녀는 외출한다", german: ["Sie geht aus"] }, // 분리
+            { korean: "우리는 외출한다", german: ["Wir gehen aus"] },
+            { korean: "너희는 외출한다", german: ["Ihr geht aus"] },
+            { korean: "그들/당신들은 외출한다", german: ["Sie gehen aus"] },
+
+            // mitbringen (가져오다) - 분리 동사
+            { korean: "나는 가져온다", german: ["Ich bringe mit"] },
+            { korean: "너는 가져온다", german: ["Du bringst mit"] },
+            { korean: "그는 가져온다", german: ["Er bringt mit"] }, // 분리
+            { korean: "그녀는 가져온다", german: ["Sie bringt mit"] }, // 분리
+            { korean: "우리는 가져온다", german: ["Wir bringen mit"] },
+            { korean: "너희는 가져온다", german: ["Ihr bringt mit"] },
+            { korean: "그들/당신들은 가져온다", german: ["Sie bringen mit"] },
+
+            // einladen (초대하다) - 분리 동사, 불규칙 동사
+            { korean: "나는 초대한다", german: ["Ich lade ein"] },
+            { korean: "너는 초대한다", german: ["Du lädst ein"] },
+            { korean: "그는 초대한다", german: ["Er lädt ein"] }, // 분리
+            { korean: "그녀는 초대한다", german: ["Sie lädt ein"] }, // 분리
+            { korean: "우리는 초대한다", german: ["Wir laden ein"] },
+            { korean: "너희는 초대한다", german: ["Ihr ladet ein"] },
+            { korean: "그들/당신들은 초대한다", german: ["Sie laden ein"] },
+
+            // aufstehen (일어나다/기상하다) - 분리 동사
+            { korean: "나는 기상한다", german: ["Ich stehe auf"] },
+            { korean: "너는 기상한다", german: ["Du stehst auf"] },
+            { korean: "그는 기상한다", german: ["Er steht auf"] }, // 분리
+            { korean: "그녀는 기상한다", german: ["Sie steht auf"] }, // 분리
+            { korean: "우리는 기상한다", german: ["Wir stehen auf"] },
+            { korean: "너희는 기상한다", german: ["Ihr steht auf"] },
+            { korean: "그들/당신들은 기상한다", german: ["Sie stehen auf"] },
+
+            // essen (먹다) - 불규칙 동사
+            { korean: "나는 먹는다", german: ["Ich esse"] },
+            { korean: "너는 먹는다", german: ["Du isst"] },
+            { korean: "그는 먹는다", german: ["Er isst"] }, // 분리
+            { korean: "그녀는 먹는다", german: ["Sie isst"] }, // 분리
+            { korean: "우리는 먹는다", german: ["Wir essen"] },
+            { korean: "너희는 먹는다", german: ["Ihr esst"] },
+            { korean: "그들/당신들은 먹는다", german: ["Sie essen"] },
+        ];
+
+        // DOM 요소들을 가져옵니다.
+        const quizArea = document.getElementById('quiz-area');
+        const resultArea = document.getElementById('result-area');
+        const questionElement = document.getElementById('question');
+        const wordInfoElement = document.getElementById('word-info');
+        const answerInput = document.getElementById('answer-input');
+        const feedbackElement = document.getElementById('feedback');
+        const checkButton = document.getElementById('check-button');
+        const nextButton = document.getElementById('next-button');
+        const restartButton = document.getElementById('restart-button');
+        const scoreText = document.getElementById('score-text');
+        const progressText = document.getElementById('progress-text');
+        
+        const playbackButtons = document.getElementById('playback-buttons');
+        const nativeListenButton = document.getElementById('native-listen-button');
+        const recordButton = document.getElementById('record-button'); // 녹음 버튼
+        const myPronunciationButton = document.getElementById('my-pronunciation-button'); // 내 발음 듣기 버튼
+        const voiceInputButton = document.getElementById('voice-input-button'); // 음성 인식 버튼
+
+        let currentQuestionIndex = 0;
+        let score = 0;
+        
+        // 녹음 관련 상태 변수
+        let mediaRecorder = null;
+        let recordedChunks = [];
+        let isRecording = false;
+        let isMicrophoneReady = false; // 마이크 권한 상태
+
+        // 음성 인식 (STT) 설정
+        const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+        let recognition = null;
+        let isListening = false;
+        
+        if (SpeechRecognition) {
+            recognition = new SpeechRecognition();
+            recognition.lang = 'de-DE'; // 독일어 설정
+            recognition.interimResults = false;
+            recognition.maxAlternatives = 1;
+
+            recognition.onresult = (event) => {
+                const result = event.results[0][0].transcript;
+                answerInput.value = result.trim();
+                stopListening();
+                
+                // 정답 확인 버튼이 활성화되어 있으면 (아직 정답을 확인하지 않은 상태) 점수 체크 로직 실행
+                if (!checkButton.disabled) {
+                    checkAnswer(true); 
+                } else {
+                    // 정답을 이미 확인한 상태라면, 음성으로 입력만 완료하고 점수 체크는 하지 않음
+                    showMessage('✅ 음성 입력이 완료되었습니다. (정답 확인 모드)', false);
+                }
+            };
+
+            recognition.onerror = (event) => {
+                console.error('Speech recognition error:', event.error);
+                stopListening();
+                if (event.error === 'not-allowed') {
+                    showMessage('⚠️ 마이크 접근이 거부되었습니다. 브라우저 설정에서 허용해 주세요.', true);
+                } else if (event.error === 'no-speech') {
+                    // 사용자 요청: 간결한 메시지로 수정
+                    showMessage('⚠️ 음성 인식이 안 됐습니다. 다시 시도해주세요.', true); 
+                } else if (event.error !== 'aborted') { // 사용자가 수동으로 중지한 경우는 메시지 표시 안 함
+                    showMessage(`⚠️ 음성 인식 오류: ${event.error}`, true);
+                }
+            };
+
+            recognition.onend = () => {
+                isListening = false;
+                // 버튼 상태는 stopListening()에서 처리
+            };
+        }
+        
+        /**
+         * 페이지 로드 시 마이크 권한을 요청합니다.
+         * 이렇게 하면 퀴즈 도중 권한 팝업으로 인한 리로드/초기화를 방지할 수 있습니다.
+         */
+        function checkAndRequestMicrophonePermission() {
+            if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
+                showMessage('⚠️ 마이크 관련 기능을 지원하지 않는 브라우저입니다.', true);
+                isMicrophoneReady = false;
+                return;
+            }
+
+            // 마이크 권한 요청 시도 (사용자에게 팝업 표시)
+            navigator.mediaDevices.getUserMedia({ audio: true })
+                .then(stream => {
+                    // 권한 획득 성공
+                    isMicrophoneReady = true;
+                    // 스트림 사용 중지 (권한만 확인하고 실제 녹음은 나중에 함)
+                    stream.getTracks().forEach(track => track.stop()); 
+                    console.log("마이크 권한이 성공적으로 획득되었습니다.");
+                })
+                .catch(err => {
+                    // 권한 거부 또는 오류 발생
+                    isMicrophoneReady = false;
+                    console.warn("마이크 권한 획득에 실패했습니다. 음성 입력/녹음 기능이 제한됩니다.", err);
+                });
+        }
+
+
+        function toggleVoiceInput() {
+            if (!recognition) {
+                showMessage('⚠️ 음성 인식(STT)을 지원하지 않는 브라우저입니다.', true);
+                return;
+            }
+            if (!isMicrophoneReady) {
+                showMessage('⚠️ 마이크 권한이 필요합니다. 페이지를 새로고침하고 권한을 허용해 주세요.', true);
+                return;
+            }
+            
+            // 퀴즈가 완료되었으면 STT 사용을 막습니다.
+            if (currentQuestionIndex >= quizData.length) {
+                showMessage('⚠️ 퀴즈가 완료되었습니다. 다시 시작하세요.', true);
+                return;
+            }
+
+            if (isListening) {
+                stopListening();
+            } else {
+                startListening();
+            }
+        }
+
+        function startListening() {
+            if (!recognition || !isMicrophoneReady) return;
+            isListening = true;
+            recognition.start();
+            // 아이콘 변경: 빨간색으로 변경하고 애니메이션 추가
+            voiceInputButton.classList.remove('text-zinc-500', 'hover:text-red-600');
+            voiceInputButton.classList.add('text-red-600', 'animate-pulse');
+            showMessage('🎤 독일어로 정답을 말씀하세요.', false);
+        }
+
+        function stopListening() {
+             if (!recognition) return;
+             if (isListening) {
+                 recognition.stop();
+             }
+             // 아이콘 복구: 회색으로 변경하고 애니메이션 제거
+             voiceInputButton.classList.remove('text-red-600', 'animate-pulse');
+             voiceInputButton.classList.add('text-zinc-500', 'hover:text-red-600');
+             isListening = false;
+        }
+
+
+        // --- 헬퍼 함수 ---
+
+        // alert() 대신 피드백 메시지를 표시하는 함수
+        function showMessage(message, isError = false) {
+            feedbackElement.textContent = message;
+            feedbackElement.classList.remove('text-green-600', 'text-red-600', 'text-gray-800');
+            feedbackElement.classList.add(isError ? 'text-red-600' : 'text-gray-800');
+        }
+        
+        // 음성 입력 정규화 함수 (대소문자 무시, 끝부분 구두점 무시)
+        function normalizeVoiceInput(text) {
+            // 1. 소문자 변환 및 공백 제거
+            let normalized = text.toLowerCase().trim();
+            // 2. STT가 자주 붙이는 문장 끝 구두점 제거 (독일어: 마침표, 물음표, 느낌표, 쉼표, 콜론 등)
+            normalized = normalized.replace(/[.,!?:;]$/, '');
+            // 3. 중복된 공백을 하나로 줄이고 앞뒤 공백 제거
+            normalized = normalized.replace(/\s+/g, ' ').trim(); 
+            return normalized;
+        }
+
+        // --- 퀴즈 로직 함수 ---
+
+        // 퀴즈를 시작하는 함수
+        function startQuiz() {
+            // 퀴즈 데이터 섞기
+            quizData.sort(() => Math.random() - 0.5);
+            
+            currentQuestionIndex = 0;
+            score = 0;
+            resultArea.classList.add('hidden');
+            quizArea.classList.remove('hidden');
+            loadQuestion();
+            updateProgress();
+        }
+
+        // 다음 문제를 불러오는 함수
+        function loadQuestion() {
+            // STT 리스닝 중단
+            stopListening();
+            
+            if (currentQuestionIndex < quizData.length) {
+                const currentQuestion = quizData[currentQuestionIndex];
+                questionElement.textContent = currentQuestion.korean;
+                // 단어 정보는 숨깁니다.
+                wordInfoElement.textContent = ""; 
+                answerInput.value = '';
+                feedbackElement.textContent = '';
+                
+                // 녹음 상태 초기화 및 버튼 비활성화
+                isRecording = false;
+                recordedChunks = [];
+                if (recordButton) {
+                    recordButton.textContent = '🎤 녹음';
+                    recordButton.classList.remove('bg-gray-500', 'animate-pulse');
+                    recordButton.classList.add('bg-red-500', 'hover:bg-red-600');
+                }
+                if (myPronunciationButton) {
+                    myPronunciationButton.textContent = '🗣️ 재생';
+                    myPronunciationButton.disabled = true;
+                }
+                
+                // 발음 재생/녹음 버튼 그룹 숨기기
+                if (playbackButtons) playbackButtons.classList.add('hidden'); 
+
+                answerInput.disabled = false;
+                
+                checkButton.disabled = false;
+                checkButton.classList.remove('bg-gray-400', 'cursor-not-allowed');
+                checkButton.classList.add('bg-violet-600', 'hover:bg-violet-700', 'transform', 'hover:scale-105');
+                nextButton.disabled = true;
+                nextButton.classList.remove('bg-violet-600', 'hover:bg-violet-700', 'transform', 'hover:scale-105');
+                nextButton.classList.add('bg-gray-400', 'cursor-not-allowed');
+                answerInput.focus();
+            } else {
+                showResult();
+            }
+        }
+
+        /**
+         * 정답을 확인하는 핵심 로직입니다.
+         * 키보드 입력 시: 관사는 대문자 시작 또는 소문자 시작만 허용(중간 대소문자 X), 명사 본체는 엄격.
+         * 음성 입력 시: 전체적으로 대소문자 유연 (STT의 부정확성 보정).
+         * [사용자 규칙 적용]: 단독 동사/형용사 등은 첫 글자 대소문자 유연 허용. 명사/문장은 엄격 적용.
+         */
+        function checkAnswer(isVoiceInput = false) {
+            stopListening(); 
+            
+            const currentQuestion = quizData[currentQuestionIndex];
+            // 가능한 모든 정답 (배열 형태)
+            let correctAnswers = Array.isArray(currentQuestion.german) ? currentQuestion.german : [currentQuestion.german[0]];
+            
+            let isCorrect = false;
+            let userInput = answerInput.value.trim();
+            
+            if (isVoiceInput) {
+                // 1. 음성 입력 (Voice Input): STT의 부정확함을 고려하여 Case-insensitive 체크 (유연함 유지)
+                const cleanUserInput = normalizeVoiceInput(userInput);
+
+                isCorrect = correctAnswers.some(ans => {
+                    // 가능한 모든 정답을 소문자로 변환하여 비교
+                    const cleanAns = normalizeVoiceInput(ans);
+                    return cleanAns === cleanUserInput;
+                });
+                
+            } else {
+                // 2. 키보드 입력 (Keyboard Input) - 사용자 커스텀 규칙 적용
+                    
+                isCorrect = correctAnswers.some(correctWord => {
+                    
+                    // Case 1: Full strict match (관사/대소문자/구두점까지 모두 정확히 입력한 경우)
+                    if (correctWord === userInput) return true; 
+
+                    // [사용자 규칙 적용] 단독 동사/형용사/부사 등(소문자로 시작하며 공백이 없는 단어)에 대한 유연한 체크
+                    // 이 단어들은 문장이 아니므로 첫 글자의 대문자/소문자를 모두 허용합니다.
+                    // 예: was (was 또는 Was 모두 허용), fertig (fertig 또는 Fertig 모두 허용)
+                    const isFlexibleWord = correctWord.charAt(0).toLowerCase() === correctWord.charAt(0) && !correctWord.includes(' ');
+                    
+                    if (isFlexibleWord) {
+                        // 대문자로 시작하는 형태와 소문자로 시작하는 형태 모두 허용
+                        const flexibleInput1 = correctWord.charAt(0).toUpperCase() + correctWord.slice(1); 
+                        const flexibleInput2 = correctWord.charAt(0).toLowerCase() + correctWord.slice(1); 
+                        
+                        // 구두점을 제거한 형태도 비교에 추가 (예: 'mit'를 비교할 때 'mit'만 허용)
+                        const cleanCorrectWord = correctWord.replace(/[.,!?:;]$/, ''); 
+                        const cleanUserInput = userInput.replace(/[.,!?:;]$/, '');
+
+                        if (cleanUserInput === cleanCorrectWord || cleanUserInput === flexibleInput1 || cleanUserInput === flexibleInput2) {
+                            return true;
+                        }
+                    }
+
+                    // Case 2: 관사가 있는 명사/구문 체크 (독일어 표준 규칙: 명사 본체 및 구문은 엄격)
+                    // 이 로직은 복합 구문(예: 'ein Buch lesen')과 명사(예: 'der Name')의 관사 유연성을 처리합니다.
+                    
+                    // 관사 목록 (모두 소문자 + 공백)
+                    const definiteArticles = ['der ', 'die ', 'das '];
+                    const exceptions = ['die USA', 'die Schweiz']; // 붙어있거나 특수한 예외 처리용
+                    
+                    const lowerCorrect = correctWord.toLowerCase();
+                    let articleLength = -1;
+
+                    // 2-1. 공백으로 구분된 관사가 있는 경우 체크
+                    for (const article of definiteArticles) {
+                        if (lowerCorrect.startsWith(article)) {
+                            articleLength = article.length; // 'der '의 경우 4
+                            break;
+                        }
+                    }
+                    
+                    // 2-2. 예외 처리 (관사와 명사가 붙어있거나 특수한 경우)
+                    if (articleLength === -1) {
+                        for (const exc of exceptions) {
+                            if (correctWord.startsWith(exc)) {
+                                articleLength = exc.length; 
+                                break;
+                            }
+                        }
+                    }
+
+                    // 2-3. 관사가 식별된 경우 (articleLength > 0)에만 유연성 로직 적용
+                    if (articleLength > 0 && userInput.length >= articleLength) {
+                        
+                        const correctArticlePart = correctWord.substring(0, articleLength); // 예: "der "
+                        const userArticlePart = userInput.substring(0, articleLength);      // 예: "Der "
+                        
+                        const correctWordPart = correctWord.substring(articleLength);     
+                        const userWordPart = userInput.substring(articleLength);         
+
+                        const baseArticle = correctArticlePart.trim().toLowerCase(); // 예: "der"
+                        
+                        // 관사 부분에 대해서만 소문자 전체 또는 첫 글자 대문자 허용
+                        const allowedForms = [
+                            correctArticlePart, // 예: "der " (정확한 형태)
+                            baseArticle.charAt(0).toUpperCase() + baseArticle.slice(1) + correctArticlePart.slice(baseArticle.length) // 예: "Der " (첫 글자 대문자 허용)
+                        ];
+
+                        // Article Check: userArticlePart가 허용되는 두 가지 형태 중 하나와 일치하는지 확인
+                        const articleMatch = allowedForms.includes(userArticlePart);
+
+                        // Word Check: 명사 본체는 엄격하게 대소문자 일치 (독일어 명사 규칙)
+                        const wordMatch = userWordPart === correctWordPart;
+                        
+                        if (articleMatch && wordMatch) return true; // Flexible article match found
+                    }
+                    
+                    // 3. 그 외의 모든 경우는 (명사의 대소문자 오류 등) 오답 처리
+                    return false; 
+                });
+            }
+
+
+            if (isCorrect) {
+                feedbackElement.textContent = '정답입니다! 😊';
+                feedbackElement.classList.remove('text-red-600');
+                feedbackElement.classList.add('text-green-600');
+                score++;
+            } else {
+                // 틀렸을 때 독일어 철자 정답만 보여줍니다.
+                const allAnswers = correctAnswers.join(' 또는 ');
+                feedbackElement.textContent = `틀렸습니다. 정답: ${allAnswers}`;
+                feedbackElement.classList.remove('text-green-600');
+                feedbackElement.classList.add('text-red-600');
+            }
+
+            // [NEW FEATURE] 정답 확인 시 자동으로 독일어 발음 재생
+            speakGerman();
+            
+            // 정답 확인 후 발음 재생 및 녹음 버튼을 표시합니다.
+            if (playbackButtons) {
+                playbackButtons.classList.remove('hidden');
+            }
+            
+            answerInput.disabled = true;
+            checkButton.disabled = true;
+            checkButton.classList.remove('bg-violet-600', 'hover:bg-violet-700', 'transform', 'hover:scale-105');
+            checkButton.classList.add('bg-gray-400', 'cursor-not-allowed');
+            nextButton.disabled = false;
+            nextButton.classList.remove('bg-gray-400', 'cursor-not-allowed');
+            nextButton.classList.add('bg-violet-600', 'hover:bg-violet-700', 'transform', 'hover:scale-105');
+        }
+
+        // 퀴즈 진행 상태 업데이트
+        function updateProgress() {
+            progressText.textContent = `문제 ${currentQuestionIndex + 1} / ${quizData.length}`;
+            if (currentQuestionIndex >= quizData.length) {
+                progressText.textContent = `퀴즈 완료!`;
+            }
+        }
+        
+        // 최종 결과 표시
+        function showResult() {
+            quizArea.classList.add('hidden');
+            resultArea.classList.remove('hidden');
+            scoreText.textContent = `점수: ${score} / ${quizData.length}`;
+            // 퀴즈가 끝나면 STT 중단
+            stopListening(); 
+        }
+        
+        // 원어민 발음 재생 함수 (Text-to-Speech)
+        function speakGerman() {
+            // 현재 재생 중인 TTS가 있다면 중지
+            if (window.speechSynthesis.speaking) {
+                window.speechSynthesis.cancel();
+            }
+
+            if ('speechSynthesis' in window) {
+                const currentQuestion = quizData[currentQuestionIndex];
+                // 첫 번째 요소(철자)로 읽습니다.
+                const textToSpeak = Array.isArray(currentQuestion.german) ? currentQuestion.german[0] : currentQuestion.german[0]; 
+                const utterance = new SpeechSynthesisUtterance(textToSpeak);
+                utterance.lang = 'de-DE'; // 독일어 설정
+                window.speechSynthesis.speak(utterance);
+            } else {
+                console.error('Text-to-speech not supported in this browser.');
+                showMessage('⚠️ 음성 합성을 지원하지 않는 브라우저입니다.', true);
+            }
+        }
+
+        // --- 오디오 녹음/재생 로직 (기존 유지) ---
+
+        function startRecording() {
+            if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
+                showMessage('⚠️ 이 브라우저에서는 녹음 기능을 지원하지 않습니다.', true);
+                return;
+            }
+            if (!isMicrophoneReady) {
+                showMessage('⚠️ 마이크 권한이 없어 녹음을 시작할 수 없습니다. 페이지를 새로고침하고 권한을 허용해 주세요.', true);
+                return;
+            }
+
+            if (isRecording) {
+                // 이미 녹음 중이면 중지
+                stopRecording();
+                return;
+            }
+
+            navigator.mediaDevices.getUserMedia({ audio: true })
+                .then(stream => {
+                    isRecording = true;
+                    recordedChunks = [];
+                    // MediaRecorder를 생성할 때 스트림을 사용
+                    mediaRecorder = new MediaRecorder(stream);
+                    
+                    mediaRecorder.ondataavailable = (e) => {
+                        recordedChunks.push(e.data);
+                    };
+
+                    mediaRecorder.onstop = () => {
+                        // MediaRecorder가 멈춘 후에 스트림을 완전히 닫습니다.
+                        stream.getTracks().forEach(track => track.stop()); 
+                        isRecording = false;
+                        recordButton.textContent = '🎤 녹음';
+                        recordButton.classList.remove('bg-gray-500', 'animate-pulse');
+                        recordButton.classList.add('bg-red-500', 'hover:bg-red-600');
+                        myPronunciationButton.disabled = false;
+                        myPronunciationButton.textContent = '🗣️ 재생';
+                        showMessage('✅ 녹음이 완료되었습니다. "재생"을 눌러 확인하세요.', false);
+                    };
+
+                    mediaRecorder.start();
+                    recordButton.textContent = '🔴 녹음 중...';
+                    recordButton.classList.remove('bg-red-500', 'hover:bg-red-600');
+                    recordButton.classList.add('bg-gray-500', 'animate-pulse');
+                    myPronunciationButton.disabled = true;
+                    showMessage('🔴 녹음 중... 다시 누르면 중지됩니다.', false);
+                })
+                .catch(err => {
+                    // 권한은 미리 획득했더라도, 다른 기술적인 문제로 녹음이 실패할 수 있습니다.
+                    showMessage('⚠️ 녹음 중 오류가 발생했습니다: ' + err.name, true);
+                    console.error('Recording Error:', err);
+                    isRecording = false;
+                });
+        }
+
+        function stopRecording() {
+            if (mediaRecorder && mediaRecorder.state !== 'inactive') {
+                mediaRecorder.stop();
+            }
+        }
+
+        function playRecording() {
+            if (recordedChunks.length === 0) {
+                showMessage('⚠️ 녹음된 발음이 없습니다. 먼저 녹음을 시작해 주세요.', true);
+                return;
+            }
+
+            const blob = new Blob(recordedChunks, { type: 'audio/webm' });
+            const audioURL = URL.createObjectURL(blob);
+            const audio = new Audio(audioURL);
+            
+            myPronunciationButton.disabled = true;
+            myPronunciationButton.textContent = '🎧 재생 중...';
+
+            audio.onended = () => {
+                myPronunciationButton.disabled = false;
+                myPronunciationButton.textContent = '🗣️ 재생';
+            };
+            
+            audio.play();
+        }
+
+        // --- 이벤트 리스너 ---
+
+        // 키보드 입력의 '확인'은 플래그 없이 checkAnswer() 호출
+        if (checkButton) checkButton.addEventListener('click', () => checkAnswer(false));
+        
+        if (nextButton) {
+            nextButton.addEventListener('click', () => {
+                currentQuestionIndex++;
+                loadQuestion();
+                updateProgress();
+            });
+        }
+        
+        if (nativeListenButton) nativeListenButton.addEventListener('click', speakGerman); 
+        
+        // 녹음/재생 버튼 리스너
+        if (recordButton) recordButton.addEventListener('click', startRecording); 
+        if (myPronunciationButton) myPronunciationButton.addEventListener('click', playRecording); 
+        
+        // 음성 입력 버튼 리스너
+        if (voiceInputButton) voiceInputButton.addEventListener('click', toggleVoiceInput);
+
+
+        if (restartButton) {
+            restartButton.addEventListener('click', () => {
+                resultArea.classList.add('hidden');
+                startQuiz(); // 퀴즈 재시작
+            });
+        }
+        
+        // 초기 화면 설정: DOMContentLoaded 시 권한 요청 후 퀴즈 시작
+        document.addEventListener('DOMContentLoaded', () => {
+             // 1. 마이크 권한을 미리 요청하여 권한 팝업이 퀴즈 시작 전에 뜨도록 합니다.
+             checkAndRequestMicrophonePermission(); 
+             
+             // 2. 권한 요청과 별개로 퀴즈를 시작합니다. (권한 획득 여부는 isMicrophoneReady 플래그로 확인)
+             startQuiz();
+        });
+        
+        // 문서 전체에서 Enter 키를 감지하여 동작을 제어합니다.
+        document.addEventListener('keyup', (e) => {
+            if (e.key === 'Enter' && !quizArea.classList.contains('hidden')) {
+                // 키보드 입력 시 Enter는 플래그 없이 checkAnswer(false)와 동일
+                if (!answerInput.disabled && checkButton && !checkButton.disabled) {
+                    checkAnswer(false); 
+                } else if (nextButton && !nextButton.disabled) {
+                    currentQuestionIndex++;
+                    loadQuestion();
+                    updateProgress();
+                }
+            }
+        });
+    </script>
+</body>
+</html>
