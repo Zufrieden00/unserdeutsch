@@ -1,0 +1,935 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>독일어 시간 읽기 퀴즈</title>
+    <!-- Inter 폰트와 Tailwind CSS를 로드합니다 -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700;800&display=swap">
+    <style>
+        body {
+            font-family: 'Inter', sans-serif;
+        }
+        #voice-input-button {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+        @keyframes pulse {
+          0%, 100% { opacity: 1; }
+          50% { opacity: 0.5; }
+        }
+        .animate-pulse {
+          animation: pulse 1.5s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+        }
+        /* 시계 배경 및 테두리 스타일 */
+        #clock-display-container {
+            box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05);
+            background-color: #f7fafc; /* light gray background */
+        }
+    </style>
+    <!-- Font Awesome 아이콘을 로드합니다 -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.1.1/css/all.min.css">
+</head>
+<body class="bg-gray-100 flex items-center justify-center min-h-screen p-4">
+    <div id="quiz-container" class="bg-white p-8 md:p-10 rounded-3xl shadow-2xl max-w-lg w-full flex flex-col items-center text-center space-y-8 border border-gray-200">
+        <!-- 퀴즈 제목 -->
+        <div class="w-full">
+            <h1 class="text-4xl font-extrabold text-violet-700">독일어 시간 읽기 퀴즈 ⏰</h1>
+            <!-- 이 문구의 ID를 추가하여 JS에서 제어합니다. -->
+            <p id="selection-prompt" class="text-sm text-gray-500 mt-1">학습할 모드를 선택해 주세요.</p>
+        </div>
+
+        <!-- 1. 버전 선택 영역 -->
+        <div id="version-selection-area" class="w-full space-y-6">
+            <h2 class="text-2xl font-semibold text-gray-700">버전 선택</h2>
+            
+            <!-- 시간 말하기 1 (형식만) - 설명 수정됨 -->
+            <button id="mode-formal-only" class="w-full p-6 bg-blue-500 hover:bg-blue-600 text-white font-extrabold rounded-2xl shadow-lg transition-all duration-200 transform hover:scale-[1.02]">
+                <div class="text-3xl">시간 말하기 1</div>
+                <div class="text-sm mt-1">예시: neun Uhr fünfzehn (9:15)</div>
+            </button>
+            
+            <!-- 시간 말하기 2 (비형식만) - 설명 수정됨 -->
+            <button id="mode-mixed" class="w-full p-6 bg-lime-500 hover:bg-lime-600 text-white font-extrabold rounded-2xl shadow-lg transition-all duration-200 transform hover:scale-[1.02]">
+                <div class="text-3xl">시간 말하기 2</div>
+                <div class="text-sm mt-1">예시: Viertel nach neun (9:15)</div>
+            </button>
+        </div>
+
+        <!-- 2. 퀴즈 진행 영역 -->
+        <div id="quiz-area" class="hidden w-full space-y-6">
+            <p id="progress-text" class="text-sm text-gray-500 mt-2">문제 0 / 0</p>
+            <!-- 모드 정보가 간결하게 표시됩니다. -->
+            <p id="mode-info" class="text-xs font-medium text-blue-700 h-4"></p>
+            
+            <!-- 시계 및 질문 표시 영역: 시계 추가 -->
+            <div class="flex flex-col items-center justify-center w-full space-y-4">
+                <!-- 아날로그 시계 SVG 컨테이너 -->
+                <div id="clock-display-container" class="w-48 h-48 sm:w-60 sm:h-60 rounded-full bg-white shadow-xl border-4 border-gray-300 relative p-2">
+                    <svg id="analog-clock" viewBox="0 0 100 100" class="w-full h-full">
+                        <!-- Clock Face Marks (Longer lines for 12, 3, 6, 9) -->
+                        <g stroke="#333" stroke-width="1.2">
+                            <line x1="50" y1="3" x2="50" y2="7" transform="rotate(0, 50, 50)" />
+                            <line x1="50" y1="3" x2="50" y2="7" transform="rotate(90, 50, 50)" />
+                            <line x1="50" y1="3" x2="50" y2="7" transform="rotate(180, 50, 50)" />
+                            <line x1="50" y1="3" x2="50" y2="7" transform="rotate(270, 50, 50)" />
+                        </g>
+                        <!-- Smaller marks -->
+                        <g stroke="#777" stroke-width="0.5">
+                            <line x1="50" y1="4" x2="50" y2="6" transform="rotate(30, 50, 50)" />
+                            <line x1="50" y1="4" x2="50" y2="6" transform="rotate(60, 50, 50)" />
+                            <line x1="50" y1="4" x2="50" y2="6" transform="rotate(120, 50, 50)" />
+                            <line x1="50" y1="4" x2="50" y2="6" transform="rotate(150, 50, 50)" />
+                            <line x1="50" y1="4" x2="50" y2="6" transform="rotate(210, 50, 50)" />
+                            <line x1="50" y1="4" x2="50" y2="6" transform="rotate(240, 50, 50)" />
+                            <line x1="50" y1="4" x2="50" y2="6" transform="rotate(300, 50, 50)" />
+                            <line x1="50" y1="4" x2="50" y2="6" transform="rotate(330, 50, 50)" />
+                        </g>
+                        
+                        <!-- Clock Numbers (1-12) -->
+                        <g id="clock-numbers" fill="#333" font-size="8" text-anchor="middle" dominant-baseline="central" font-weight="600">
+                            <text x="50" y="10">12</text>
+                            <text x="70" y="15">1</text>
+                            <text x="85" y="30">2</text>
+                            <text x="90" y="50">3</text>
+                            <text x="85" y="70">4</text>
+                            <text x="70" y="85">5</text>
+                            <text x="50" y="90">6</text>
+                            <text x="30" y="85">7</text>
+                            <text x="15" y="70">8</text>
+                            <text x="10" y="50">9</text>
+                            <text x="15" y="30">10</text>
+                            <text x="30" y="15">11</text>
+                        </g>
+
+                        <!-- Clock Hands -->
+                        <line id="hour-hand" x1="50" y1="50" x2="50" y2="25" stroke="#222" stroke-width="3.5" stroke-linecap="round" />
+                        <line id="minute-hand" x1="50" y1="50" x2="50" y2="15" stroke="#222" stroke-width="2.5" stroke-linecap="round" />
+                        
+                        <!-- Center dot -->
+                        <circle cx="50" cy="50" r="3" fill="#A855F7" stroke="#222" stroke-width="1.5" />
+                    </svg>
+                </div>
+                
+                <!-- 디지털 시간 표시 (문제) -->
+                <div class="h-10 flex flex-col items-center justify-center bg-violet-50 rounded-xl p-2 w-full transition-colors duration-300 shadow-inner">
+                    <p id="question" class="text-2xl font-bold text-gray-800">문제를 불러오는 중...</p>
+                </div>
+                <!-- word-info는 이제 사용되지 않지만 구조 유지를 위해 h-4로 남겨둡니다. -->
+                <p id="word-info" class="text-xs text-gray-500 h-4"></p>
+            </div>
+            
+            <!-- 사용자 입력 필드 및 음성 입력 버튼 통합 -->
+            <div class="relative w-full mt-4">
+                <!-- Placeholder: "정답을 입력해주세요" -->
+                <input type="text" id="answer-input" placeholder="정답을 입력해주세요" class="w-full p-4 pr-14 text-xl rounded-2xl border-2 border-violet-300 focus:border-violet-600 focus:outline-none transition-all duration-200 shadow-md">
+                
+                <button id="voice-input-button" class="absolute right-0 top-0 h-full w-14 bg-transparent text-zinc-500 hover:text-red-600 rounded-r-2xl transition-all duration-200 focus:outline-none" title="음성으로 정답 입력">
+                    <!-- 마이크 아이콘 클래스 수정 완료 -->
+                    <i class="fas fa-microphone text-xl"></i> 
+                </button>
+            </div>
+            
+            <!-- STT 인식 결과 표시 (제거되었으나 구조 유지를 위해 빈 공간으로 남겨둠) -->
+            <p id="stt-result-display" class="text-sm text-gray-700 font-medium h-4 mt-2 invisible"></p>
+            
+            <!-- 피드백 메시지 영역 -->
+            <p id="feedback" class="text-lg min-h-[2rem] font-extrabold mb-2"></p>
+            
+            <!-- 발음 연습 안내 문구 (요청 위치로 이동) -->
+            <p id="pronunciation-guide" class="text-sm text-gray-600 mb-3 text-center h-5 font-medium"></p>
+
+            <!-- 1. 발음 재생 및 녹음 버튼 -->
+            <div id="playback-buttons" class="flex gap-3 justify-center flex-wrap pt-2 hidden">
+                <button id="native-listen-button" class="bg-cyan-600 hover:bg-cyan-700 text-white font-bold py-3 px-4 rounded-xl transition-all duration-200 transform hover:scale-105 text-sm md:text-base">
+                    <i class="fas fa-volume-up mr-1"></i> 듣기
+                </button>
+                <button id="record-button" class="bg-red-500 hover:bg-red-600 text-white font-bold py-3 px-4 rounded-xl transition-all duration-200 transform hover:scale-105 text-sm md:text-base">
+                    <i class="fas fa-microphone mr-1"></i> 녹음
+                </button>
+                <button id="my-pronunciation-button" class="bg-yellow-500 hover:bg-yellow-600 text-white font-bold py-3 px-4 rounded-xl transition-all duration-200 transform hover:scale-105 text-sm md:text-base disabled:opacity-50 disabled:cursor-not-allowed" disabled>
+                    <i class="fas fa-headphones mr-1"></i> 재생
+                </button>
+            </div>
+            
+            <!-- 2. 버튼 그룹 (확인/다음) -->
+            <div class="flex space-x-4 justify-center pt-2">
+                <button id="check-button" class="bg-violet-600 hover:bg-violet-700 text-white font-bold py-4 px-6 rounded-2xl shadow-lg transition-all duration-200 transform hover:scale-105">
+                    <i class="fas fa-check mr-2"></i> 확인
+                </button>
+                <button id="next-button" class="bg-gray-400 text-white font-bold py-4 px-6 rounded-2xl shadow-lg cursor-not-allowed transition-all duration-200" disabled>
+                    <i class="fas fa-arrow-right mr-2"></i> 다음 문제
+                </button>
+            </div>
+        </div>
+
+        <!-- 3. 최종 결과 표시 영역 -->
+        <div id="result-area" class="hidden w-full space-y-6">
+            <h2 class="text-3xl font-bold text-violet-700">퀴즈 완료! 🎉</h2>
+            <!-- scoreText는 JS에서 동적으로 업데이트됩니다 -->
+            <p id="score-text" class="text-2xl text-gray-700">점수: 0 / 0</p>
+            <button id="restart-button" class="bg-lime-600 hover:bg-lime-700 text-white font-bold py-4 px-8 rounded-2xl shadow-lg transition-all duration-200 transform hover:scale-105">
+                <i class="fas fa-redo-alt mr-2"></i> 다시 시작
+            </button>
+            <button id="go-to-selection" class="bg-gray-400 hover:bg-gray-500 text-white font-bold py-4 px-8 rounded-2xl shadow-lg transition-all duration-200 transform hover:scale-105">
+                <i class="fas fa-list mr-2"></i> 모드 선택으로
+            </button>
+        </div>
+    </div>
+
+    <script>
+        // --- 퀴즈 데이터 정의 ---
+        
+        // 1. 형식 표현만 있는 문제 (시간 말하기 1에 포함)
+        const formalOnlyQuestions = [
+            { korean: "18:08 Uhr", german: ["achtzehn Uhr acht"] },
+            { korean: "02:59 Uhr", german: ["zwei Uhr neunundfünfzig"] },
+            { korean: "13:03 Uhr", german: ["dreizehn Uhr drei"] },
+            { korean: "00:49 Uhr", german: ["null Uhr neunundvierzig"] },
+            { korean: "08:00 Uhr", german: ["acht Uhr"] },
+            { korean: "14:35 Uhr", german: ["vierzehn Uhr fünfunddreißig"] },
+            { korean: "23:07 Uhr", german: ["dreiundzwanzig Uhr sieben"] },
+            { korean: "17:01 Uhr", german: ["siebzehn Uhr eins"] },
+            { korean: "16:28 Uhr", german: ["sechzehn Uhr achtundzwanzig"] },
+            { korean: "09:10 Uhr", german: ["neun Uhr zehn"] },
+            { korean: "20:25 Uhr", german: ["zwanzig Uhr fünfundzwanzig"] },
+            { korean: "12:34 Uhr", german: ["zwölf Uhr vierunddreißig"] }, 
+            { korean: "05:06 Uhr", german: ["fünf Uhr sechs"] },
+            { korean: "17:38 Uhr", german: ["siebzehn Uhr achtunddreißig"] },
+        ];
+
+        // 2. 비형식 표현이 있는 문제 (시간 말하기 2의 유일한 문제 목록)
+        // [Formal, Informal] 순서
+        const informalTargetQuestions = [
+            { korean: "07:30 Uhr", german: ["sieben Uhr dreißig", "halb acht"] },
+            { korean: "08:05 Uhr", german: ["acht Uhr fünf", "fünf nach acht"] },
+            { korean: "09:15 Uhr", german: ["neun Uhr fünfzehn", "Viertel nach neun"] },
+            { korean: "10:20 Uhr", german: ["zehn Uhr zwanzig", "zwanzig nach zehn"] },
+            { korean: "11:40 Uhr", german: ["elf Uhr vierzig", "zwanzig vor zwölf"] },
+            { korean: "12:45 Uhr", german: ["zwölf Uhr fünfundvierzig", "Viertel vor eins"] },
+            { korean: "13:55 Uhr", german: ["dreizehn Uhr fünfundfünfzig", "fünf vor zwei"] },
+            { korean: "14:30 Uhr", german: ["vierzehn Uhr dreißig", "halb drei"] }, 
+            { korean: "15:05 Uhr", "german": ["fünfzehn Uhr fünf", "fünf nach drei"] },
+            { korean: "16:15 Uhr", german: ["sechzehn Uhr fünfzehn", "Viertel nach vier"] },
+            { korean: "17:20 Uhr", german: ["siebzehn Uhr zwanzig", "zwanzig nach fünf"] }, 
+            { korean: "18:40 Uhr", german: ["achtzehn Uhr vierzig", "zwanzig vor sieben"] },
+            { korean: "19:45 Uhr", german: ["neunzehn Uhr fünfundvierzig", "Viertel vor acht"] },
+            { korean: "20:55 Uhr", german: ["zwanzig Uhr fünfundfünfzig", "fünf vor neun"] },
+        ]; 
+        
+        // 전체 퀴즈 데이터 (시간 말하기 1에서 사용)
+        const quizData = formalOnlyQuestions.concat(informalTargetQuestions);
+
+        // --- 전역 상태 변수 ---
+        const selectionArea = document.getElementById('version-selection-area');
+        const quizArea = document.getElementById('quiz-area');
+        const resultArea = document.getElementById('result-area');
+        const questionElement = document.getElementById('question');
+        // wordInfoElement는 이제 발음 안내 문구 저장용으로 사용하지 않습니다.
+        const wordInfoElement = document.getElementById('word-info'); 
+        const answerInput = document.getElementById('answer-input');
+        const feedbackElement = document.getElementById('feedback');
+        const checkButton = document.getElementById('check-button');
+        const nextButton = document.getElementById('next-button');
+        const restartButton = document.getElementById('restart-button');
+        const goToSelectionButton = document.getElementById('go-to-selection');
+        const scoreText = document.getElementById('score-text');
+        const progressText = document.getElementById('progress-text');
+        const modeInfoElement = document.getElementById('mode-info');
+        const sttResultDisplay = document.getElementById('stt-result-display');
+        
+        const modeFormalButton = document.getElementById('mode-formal-only');
+        const modeMixedButton = document.getElementById('mode-mixed');
+        
+        const playbackButtons = document.getElementById('playback-buttons');
+        const nativeListenButton = document.getElementById('native-listen-button');
+        const recordButton = document.getElementById('record-button'); 
+        const myPronunciationButton = document.getElementById('my-pronunciation-button'); 
+        const voiceInputButton = document.getElementById('voice-input-button'); 
+        
+        const clockDisplayContainer = document.getElementById('clock-display-container'); // 시계 컨테이너
+        const hourHand = document.getElementById('hour-hand');
+        const minuteHand = document.getElementById('minute-hand');
+        
+        const selectionPrompt = document.getElementById('selection-prompt');
+        // 새로운 발음 연습 안내 문구 요소
+        const pronunciationGuide = document.getElementById('pronunciation-guide');
+
+
+        let currentQuestionIndex = 0;
+        let score = 0;
+        let currentMode = 'formal'; // 기본 모드 설정
+        let currentQuizSet = []; // 현재 퀴즈에 사용되는 문제 목록
+        let rawSttResult = ''; // STT의 원본 인식 결과 저장
+
+        // 녹음/음성 인식 관련 상태 변수
+        let mediaRecorder = null;
+        let recordedChunks = [];
+        let isRecording = false;
+
+        const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+        let recognition = null;
+        let isListening = false;
+        const isSttSupported = !!SpeechRecognition; 
+        
+        if (isSttSupported) {
+            recognition = new SpeechRecognition();
+            recognition.lang = 'de-DE'; // 독일어 설정 유지
+            recognition.interimResults = false;
+            recognition.maxAlternatives = 1;
+
+            recognition.onresult = (event) => {
+                const result = event.results[0][0].transcript;
+                
+                rawSttResult = result.trim();
+                
+                // STT 인식 결과를 화면에 명시적으로 표시하는 문구 제거됨
+                answerInput.value = rawSttResult; // 입력창에 STT 결과를 반영
+                stopListening();
+                
+                if (!checkButton.disabled) {
+                    // 음성 입력 후 자동 확인 (true를 전달하여 음성 입력임을 알림)
+                    checkAnswer(true); 
+                } else {
+                    showMessage('✅ 음성 입력이 완료되었습니다.', false);
+                }
+            };
+
+            recognition.onerror = (event) => {
+                if (event.error === 'aborted') {
+                    console.warn('Speech recognition status:', event.error);
+                } else {
+                    console.error('Speech recognition error:', event.error);
+                }
+                
+                stopListening();
+                if (event.error === 'not-allowed') {
+                    showMessage('⚠️ 마이크 권한이 거부되었습니다. 브라우저 주소창의 자물쇠 아이콘을 눌러 마이크 접근을 허용했는지 확인해 주세요.', true);
+                } else if (event.error === 'no-speech') {
+                    showMessage('⚠️ 음성 인식이 안 됐습니다. 다시 시도해주세요.', true); 
+                } else if (event.error !== 'aborted') { 
+                    showMessage(`⚠️ 음성 인식 오류: ${event.error}`, true);
+                }
+            };
+
+            recognition.onend = () => {
+                isListening = false;
+            };
+        }
+        
+        function toggleVoiceInput() {
+            if (!isSttSupported) {
+                showMessage('⚠️ 음성 인식(STT)을 지원하지 않는 브라우저입니다.', true);
+                return;
+            }
+            if (currentQuestionIndex >= currentQuizSet.length) {
+                showMessage('⚠️ 퀴즈가 완료되었습니다. 다시 시작하세요.', true);
+                return;
+            }
+
+            if (isListening) {
+                stopListening();
+            } else {
+                startListening();
+            }
+        }
+
+        function startListening() {
+            if (!recognition) return;
+            try {
+                if (isListening) { 
+                     recognition.abort(); 
+                }
+                
+                rawSttResult = '';
+                
+                recognition.start();
+                isListening = true;
+                voiceInputButton.classList.remove('text-zinc-500', 'hover:text-red-600');
+                voiceInputButton.classList.add('text-red-600', 'animate-pulse');
+                showMessage('🎤 독일어로 정답을 말씀하세요.', false);
+            } catch (error) {
+                if (error.name === 'NotAllowedError') {
+                    showMessage('⚠️ 마이크 권한이 거부되었습니다. 브라우저 주소창의 자물쇠 아이콘을 눌러 마이크 접근을 허용했는지 확인해 주세요.', true);
+                } else {
+                    console.error('STT Start Error:', error);
+                    showMessage('⚠️ 음성 인식 시작 중 오류가 발생했습니다.', true);
+                }
+            }
+        }
+
+        function stopListening() {
+             if (!recognition) return;
+             if (isListening) {
+                 recognition.abort(); 
+             }
+             voiceInputButton.classList.remove('text-red-600', 'animate-pulse');
+             voiceInputButton.classList.add('text-zinc-500', 'hover:text-red-600');
+             isListening = false;
+        }
+
+
+        // --- 헬퍼 함수 ---
+
+        function showMessage(message, isError = false) {
+            feedbackElement.textContent = message;
+            feedbackElement.classList.remove('text-green-600', 'text-red-600', 'text-gray-800');
+            feedbackElement.classList.add(isError ? 'text-red-600' : 'text-gray-800');
+        }
+        
+        /**
+         * 사용자 입력을 소문자화, 공백 정리, 구두점 제거 등 일반적인 정규화 처리
+         */
+        function normalizeVoiceInput(text) {
+            let normalized = text.toLowerCase().trim();
+            normalized = normalized.replace(/[.,!?:;]$/, '');
+            normalized = normalized.replace(/\s+/g, ' ').trim(); 
+            return normalized;
+        }
+        
+        // 독일어 숫자 단어와 디지털 값 매핑 (시간 관련 숫자만 포함)
+        const numberWordMap = {
+            'eins': '1', 'zwei': '2', 'drei': '3', 'vier': '4', 'fünf': '5', 'sechs': '6', 
+            'sieben': '7', 'acht': '8', 'neun': '9', 'zehn': '10', 'elf': '11', 'zwölf': '12',
+            'dreizehn': '13', 'vierzehn': '14', 'fünfzehn': '15', 'sechzehn': '16', 'siebzehn': '17',
+            'achtzehn': '18', 'neunzehn': '19', 'zwanzig': '20',
+            'viertel': '15', // 'Viertel nach' for 15
+            'fünfundzwanzig': '25',
+            'dreißig': '30',
+            'vierzig': '40', 'fünfzig': '50',
+            'ein': '1', // special case for 'ein Uhr' 
+            'null': '0' // 'null Uhr'
+        };
+
+        /**
+         * 독일어 단어 정답을 STT가 인식할 수 있는 숫자+독일어 혼합 형식으로 변환합니다.
+         * (예: "zwanzig nach fünf" -> "20 nach 5")
+         */
+        function normalizeToMixedDigit(phrase) {
+            let mixedPhrase = normalizeVoiceInput(phrase);
+            
+            // Replace known number words with digits
+            for (const [word, digit] of Object.entries(numberWordMap)) {
+                // Use regex to replace the whole word only (using \b word boundaries)
+                const regex = new RegExp(`\\b${word}\\b`, 'g');
+                mixedPhrase = mixedPhrase.replace(regex, digit);
+            }
+            
+            // Clean up spaces and return
+            return mixedPhrase.replace(/\s+/g, ' ').trim();
+        }
+
+        /**
+         * SVG 시계 바늘을 그립니다.
+         * @param {string} timeString "HH:MM Uhr" 형식의 시간 문자열
+         */
+        function renderClock(timeString) {
+            const time = timeString.replace(' Uhr', '');
+            const [hour24, minute] = time.split(':').map(Number);
+            
+            // 12시 기준으로 시침 각도 계산
+            const hour = hour24 % 12; // 0-11
+            
+            // 시침 각도: (시/12 * 360) + (분/60 * 30) (분당 0.5도)
+            const hourAngle = (hour / 12) * 360 + (minute / 60) * 30;
+            
+            // 분침 각도: (분/60 * 360) (분당 6도)
+            const minuteAngle = (minute / 60) * 360; 
+            
+            if (hourHand && minuteHand) {
+                // SVG transform 속성을 사용하여 바늘 회전 (50, 50을 중심으로)
+                hourHand.setAttribute('transform', `rotate(${hourAngle}, 50, 50)`);
+                minuteHand.setAttribute('transform', `rotate(${minuteAngle}, 50, 50)`);
+            }
+        }
+
+        // --- 퀴즈 로직 함수 ---
+        
+        function showSelectionScreen() {
+            selectionArea.classList.remove('hidden');
+            quizArea.classList.add('hidden');
+            resultArea.classList.add('hidden');
+            
+            // 모드 선택 화면으로 돌아갈 때 안내 문구를 다시 표시합니다. (이전 요청 반영)
+            if (selectionPrompt) {
+                selectionPrompt.classList.remove('hidden');
+            }
+        }
+
+        function startQuiz(mode) {
+            currentMode = mode;
+            currentQuestionIndex = 0;
+            score = 0;
+            
+            // 모드 선택 후 안내 문구를 숨깁니다. (이전 요청 반영)
+            if (selectionPrompt) {
+                selectionPrompt.classList.add('hidden');
+            }
+            
+            // 모드에 따라 문제 세트 설정 및 모드 정보 텍스트 수정
+            if (currentMode === 'formal') {
+                // 시간 말하기 1: 모든 문제 사용 (형식과 비형식 혼합)
+                currentQuizSet = [...quizData]; 
+                
+                // 모드 이름만 표시
+                modeInfoElement.textContent = `현재 모드: 시간 말하기 1 (형식 표현 위주)`;
+                
+                modeInfoElement.classList.remove('text-lime-700');
+                modeInfoElement.classList.add('text-blue-700');
+                
+                // 시계 그림 숨기기 (기존 기능 유지)
+                clockDisplayContainer.classList.add('hidden'); 
+
+            } else {
+                // 시간 말하기 2: 비형식 표현이 있는 문제만 사용 (사용자 요청)
+                currentQuizSet = [...informalTargetQuestions]; 
+                
+                // 모드 이름만 표시
+                modeInfoElement.textContent = `현재 모드: 시간 말하기 2 (비형식 표현 위주)`;
+                
+                modeInfoElement.classList.remove('text-blue-700');
+                modeInfoElement.classList.add('text-lime-700');
+                
+                // 시계 그림 표시 (기존 기능 유지)
+                clockDisplayContainer.classList.remove('hidden'); 
+            }
+            
+            // 문제 셔플
+            currentQuizSet.sort(() => Math.random() - 0.5);
+            
+            selectionArea.classList.add('hidden');
+            resultArea.classList.add('hidden');
+            quizArea.classList.remove('hidden');
+
+            loadQuestion();
+            updateProgress();
+        }
+
+        function loadQuestion() {
+            stopListening();
+            
+            if (currentQuestionIndex < currentQuizSet.length) {
+                const currentQuestion = currentQuizSet[currentQuestionIndex];
+                
+                // 시계 렌더링 (시계가 숨겨져 있어도 데이터는 업데이트)
+                renderClock(currentQuestion.korean); 
+
+                questionElement.textContent = currentQuestion.korean; 
+                wordInfoElement.textContent = ''; 
+                wordInfoElement.classList.remove('text-green-600', 'text-red-600');
+                wordInfoElement.classList.add('text-gray-500');
+
+                answerInput.value = '';
+                feedbackElement.textContent = '';
+                pronunciationGuide.textContent = ''; // 문구 위치 변경에 따라 초기화
+                
+                // STT 결과 관련 리셋 (화면에 표시하지 않음)
+                rawSttResult = '';
+                
+                isRecording = false;
+                recordedChunks = [];
+                if (recordButton) {
+                    recordButton.textContent = '🎤 녹음';
+                    recordButton.classList.remove('bg-gray-500', 'animate-pulse');
+                    recordButton.classList.add('bg-red-500', 'hover:bg-red-600');
+                }
+                if (myPronunciationButton) {
+                    myPronunciationButton.textContent = '🗣️ 재생';
+                    myPronunciationButton.disabled = true;
+                }
+                
+                if (playbackButtons) playbackButtons.classList.add('hidden'); 
+
+                answerInput.disabled = false;
+                
+                checkButton.disabled = false;
+                checkButton.classList.remove('bg-gray-400', 'cursor-not-allowed');
+                checkButton.classList.add('bg-violet-600', 'hover:bg-violet-700', 'transform', 'hover:scale-105');
+                nextButton.disabled = true;
+                nextButton.classList.remove('bg-violet-600', 'hover:bg-violet-700', 'transform', 'hover:scale-105');
+                nextButton.classList.add('bg-gray-400', 'cursor-not-allowed');
+                
+                // 새로운 문제 로드 시 입력 필드에 다시 포커스를 맞춥니다. (키보드 사용을 위함)
+                answerInput.focus();
+            } else {
+                showResult();
+            }
+        }
+
+        /**
+         * 현재 모드와 질문에 맞는 순수한 독일어 단어/문장 정답 배열을 반환합니다.
+         * 숫자 형식은 반환하지 않습니다.
+         */
+        function getPossibleWordAnswers(question, mode) {
+            let wordAnswers = [];
+            const hasInformal = question.german.length > 1;
+
+            // 1. 모드별 정답 설정 (독일어 문장/단어만)
+            if (mode === 'formal') { 
+                // 시간 말하기 1: 형식 표현(german[0])만 정답으로 인정
+                wordAnswers.push(question.german[0]);
+            } else if (mode === 'mixed') { 
+                if (hasInformal) {
+                    // 시간 말하기 2: 비형식 표현(german[1])만 정답으로 인정
+                    wordAnswers.push(question.german[1]); 
+                    // 혼합 모드에서는 형식 표현도 일단 허용 (정답 처리 기준)
+                    wordAnswers.push(question.german[0]);
+                } else {
+                    // 안전 장치: 비형식 표현이 없는 경우 형식 표현 인정
+                    wordAnswers.push(question.german[0]); 
+                }
+            }
+            
+            return [...new Set(wordAnswers)]; 
+        }
+
+        /**
+         * 디지털 시간 형식의 모든 정답 후보를 반환합니다.
+         * STT가 다양한 형식(0:45, 00:45, 12:45 등)으로 인식하는 것을 보정합니다.
+         */
+        function getDigitAnswers(timeString) {
+            const answers = new Set();
+            const timeWithoutUhr = timeString.replace(' Uhr', '');
+            const [hour24, minute] = timeWithoutUhr.split(':').map(Number);
+            const minutePadded = minute.toString().padStart(2, '0');
+
+            // 12시/0시 경계에서 발생하는 STT 오류를 처리하기 위해,
+            // 12시(12:XX)는 0시(00:XX)를, 0시(00:XX)는 12시(12:XX)를 허용되는 시간으로 추가합니다.
+            let equivalentHours = [hour24];
+            if (hour24 === 12) {
+                equivalentHours.push(0); 
+            } else if (hour24 === 0) {
+                equivalentHours.push(12); 
+            }
+
+            equivalentHours.forEach(h24 => {
+                const hourPadded = h24.toString().padStart(2, '0'); // 예: 0 -> "00", 12 -> "12"
+                const hourNoZero = h24.toString(); // 예: 0 -> "0", 12 -> "12"
+                
+                // 1. 24-hour formats (padded and non-padded minute)
+                const times = [
+                    `${hourPadded}:${minutePadded}`, // 00:45, 12:45
+                    `${hourNoZero}:${minutePadded}`, // 0:45, 12:45
+                    `${hourPadded}:${minute}`,      // 00:45, 12:45 (non-padded minute)
+                    `${hourNoZero}:${minute}`,      // 0:45, 12:45 (non-padded minute)
+                ];
+
+                times.forEach(t => {
+                    if (t.includes(':')) {
+                        // Add basic forms
+                        answers.add(t);
+                        answers.add(`${t} Uhr`);
+                        
+                        // Add forms with different separators and spaces
+                        const t_space = t.replace(':', ' '); // e.g., "0 45", "12 45"
+                        const t_dot = t.replace(':', '.');   // e.g., "0.45", "12.45"
+                        
+                        answers.add(t_space);
+                        answers.add(`${t_space} Uhr`);
+                        answers.add(t_dot);
+                        answers.add(`${t_dot} Uhr`);
+                    }
+                });
+
+                // 2. 12-hour formats (Only for display purposes, usually 1-12)
+                if (h24 !== 0) { // 00:XX 시간에는 12시간 형식(12:XX)이 이미 포함되어 있으므로 제외
+                    const hour12 = h24 % 12 || 12; // 12시간 형식 변환
+                    const time12h = `${hour12}:${minutePadded}`;
+                    
+                    answers.add(time12h);
+                    answers.add(`${time12h} Uhr`);
+                    
+                    // 12-hour with non-padded minute
+                    answers.add(`${hour12}:${minute}`);
+                    
+                    // H:MM space/dot variants
+                    answers.add(time12h.replace(':', ' '));
+                    answers.add(time12h.replace(':', '.'));
+                    
+                    // H (정각일 경우)
+                    if (minute === 0) {
+                        answers.add(`${hour12}`); 
+                        answers.add(`${hour12} Uhr`); 
+                    }
+                }
+            });
+            
+            return Array.from(answers);
+        }
+
+
+        function checkAnswer(isVoiceInput = false) {
+            stopListening(); 
+            
+            const currentQuestion = currentQuizSet[currentQuestionIndex];
+            
+            // 목표 독일어 표현 확인 (피드백 메시지용)
+            // expectedPhrase는 현재 모드의 '목표' 정답이 됩니다.
+            const expectedPhrase = currentMode === 'mixed' && currentQuestion.german.length > 1 
+                                 ? currentQuestion.german[1] // 비형식 표현이 목표
+                                 : currentQuestion.german[0]; // 형식 표현 또는 유일한 표현
+
+
+            // 1. 독일어 단어 정답 목록을 가져옵니다.
+            const wordAnswers = getPossibleWordAnswers(currentQuestion, currentMode);
+            
+            // 2. 숫자 형식 정답을 가져옵니다. (STT 보정용)
+            const digitAnswers = getDigitAnswers(currentQuestion.korean);
+
+            let userInput = answerInput.value.trim();
+            const cleanUserInput = normalizeVoiceInput(userInput);
+            
+            // --- 1. 입력이 요구되는 독일어 표현과 일치하는지 확인 (Word-to-Word) ---
+            const isWordCorrect = wordAnswers.some(ans => normalizeVoiceInput(ans) === cleanUserInput);
+
+            // --- 2. 입력이 디지털 시간 형식과 일치하는지 확인 (Digit-to-Digit) ---
+            const isDigitCorrect = digitAnswers.some(d => normalizeVoiceInput(d) === cleanUserInput);
+
+            // --- 3. 입력이 숫자+독일어 혼합 형식과 일치하는지 확인 (Mixed-Digit-Word) ---
+            const isMixedCorrect = wordAnswers.some(ans => {
+                const mixedAns = normalizeToMixedDigit(ans); // 예: "zwanzig nach fünf" -> "20 nach 5"
+                return mixedAns === cleanUserInput;
+            });
+
+            // 4. 최종 정답 여부 결정 (사용자 요청 반영: 키보드 입력 시 디지털 형식/혼합 형식 불허)
+            let isCorrect = false;
+
+            if (isWordCorrect) {
+                isCorrect = true;
+            } else if (isVoiceInput && isDigitCorrect) {
+                isCorrect = true;
+            } else if (isVoiceInput && isMixedCorrect) {
+                isCorrect = true;
+            }
+
+
+            // 피드백 메시지 생성
+            if (isCorrect) {
+                let feedbackMsg = `✅ 정답입니다! 😊 (정답: ${expectedPhrase})`; // 기본 정답 표시
+
+                // STT 보정 관련 문구는 제거하고, 목표 표현만 안내하는 문구만 유지합니다.
+                if (currentMode === 'mixed' && currentQuestion.german.length > 1 && cleanUserInput === normalizeVoiceInput(currentQuestion.german[0])) {
+                    // 시간 말하기 2 모드인데 형식 표현을 썼을 경우 (정답은 맞지만 목표가 아니었음)
+                     feedbackMsg = `✅ 정답입니다! 😊 (정답이지만, 이 모드의 목표 비형식 표현은: "${expectedPhrase}" 입니다.)`;
+                }
+
+                feedbackElement.textContent = feedbackMsg;
+                feedbackElement.classList.remove('text-red-600');
+                feedbackElement.classList.add('text-green-600');
+                score++;
+            } else {
+                // 모드에 따라 정답 안내 메시지 변경
+                let correctMsg = '';
+
+                if (currentMode === 'formal') {
+                    correctMsg = `❌ 틀렸습니다. (정답): ${expectedPhrase}`;
+                } else if (currentMode === 'mixed') {
+                    correctMsg = `❌ 틀렸습니다. (비형식 목표 정답): ${expectedPhrase}`;
+                }
+                
+                // 키보드 입력으로 디지털/혼합 형식을 입력했을 경우 특별 피드백
+                if (!isVoiceInput && (isDigitCorrect || isMixedCorrect)) {
+                    correctMsg += ` (키보드 입력 시에는 반드시 독일어 표현을 입력해야 합니다.)`;
+                }
+                
+                feedbackElement.textContent = correctMsg;
+                feedbackElement.classList.remove('text-green-600');
+                feedbackElement.classList.add('text-red-600');
+            }
+            
+            // 상태 업데이트 및 다음 단계 준비
+            recordedChunks = [];
+            if (myPronunciationButton) {
+                myPronunciationButton.disabled = true;
+                myPronunciationButton.textContent = '🗣️ 재생';
+            }
+
+            speakGerman();
+            
+            // ** 요청에 따라 안내 문구 위치 변경 **
+            pronunciationGuide.textContent = '발음 연습을 원하시면 "듣기" 버튼을 누르거나 "녹음" 버튼으로 연습해보세요.'; 
+            wordInfoElement.textContent = ''; // 이전 위치는 비워둡니다.
+            
+            if (playbackButtons) {
+                playbackButtons.classList.remove('hidden');
+            }
+            
+            answerInput.disabled = true;
+            checkButton.disabled = true;
+            checkButton.classList.remove('bg-violet-600', 'hover:bg-violet-700', 'transform', 'hover:scale-105');
+            checkButton.classList.add('bg-gray-400', 'cursor-not-allowed');
+            nextButton.disabled = false;
+            nextButton.classList.remove('bg-gray-400', 'cursor-not-allowed');
+            nextButton.classList.add('bg-violet-600', 'hover:bg-violet-700', 'transform', 'hover:scale-105');
+            
+            // 정답 확인 후, 다음 엔터 키 입력을 위해 포커스를 '다음 문제' 버튼으로 이동시킵니다.
+            nextButton.focus(); 
+        }
+
+        function updateProgress() {
+            progressText.textContent = `문제 ${currentQuestionIndex + 1} / ${currentQuizSet.length}`;
+            if (currentQuestionIndex >= currentQuizSet.length) {
+                progressText.textContent = `퀴즈 완료!`;
+            }
+        }
+        
+        function showResult() {
+            quizArea.classList.add('hidden');
+            resultArea.classList.remove('hidden');
+            scoreText.textContent = `점수: ${score} / ${currentQuizSet.length}`;
+            stopListening(); 
+        }
+        
+        function speakGerman() {
+            if (window.speechSynthesis.speaking) {
+                window.speechSynthesis.cancel();
+            }
+
+            if ('speechSynthesis' in window) {
+                const currentQuestion = currentQuizSet[currentQuestionIndex];
+                let textToSpeak = '';
+                
+                // 모드에 따라 TTS 텍스트를 선택합니다.
+                if (currentMode === 'mixed' && currentQuestion.german.length > 1) {
+                    // 시간 말하기 2 모드에서는 비형식 표현(german[1])을 사용합니다.
+                    textToSpeak = currentQuestion.german[1];
+                } else {
+                    // 시간 말하기 1 모드 또는 비형식 표현이 없는 문제는 형식 표현(german[0])을 사용합니다.
+                    textToSpeak = currentQuestion.german[0]; 
+                }
+                
+                const utterance = new SpeechSynthesisUtterance(textToSpeak);
+                utterance.lang = 'de-DE'; 
+                window.speechSynthesis.speak(utterance);
+            } else {
+                console.error('Text-to-speech not supported in this browser.');
+                showMessage('⚠️ 음성 합성을 지원하지 않는 브라우저입니다.', true);
+            }
+        }
+
+        // --- 오디오 녹음/재생 로직 ---
+
+        function startRecording() {
+            if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
+                showMessage('⚠️ 이 브라우저에서는 녹음 기능을 지원하지 않습니다.', true);
+                return;
+            }
+
+            if (isRecording) {
+                stopRecording();
+                return;
+            }
+
+            // 녹음 시작 시 다시 권한을 요청합니다.
+            navigator.mediaDevices.getUserMedia({ audio: true })
+                .then(stream => {
+                    mediaRecorder = new MediaRecorder(stream);
+                    mediaRecorder.ondataavailable = (event) => {
+                        recordedChunks.push(event.data);
+                    };
+
+                    mediaRecorder.onstop = () => {
+                        const audioBlob = new Blob(recordedChunks, { type: 'audio/webm; codecs=opus' });
+                        const audioUrl = URL.createObjectURL(audioBlob);
+                        
+                        // 재생 버튼 활성화 및 URL 저장
+                        myPronunciationButton.onclick = () => {
+                            const audio = new Audio(audioUrl);
+                            audio.play();
+                        };
+                        myPronunciationButton.disabled = false;
+                        myPronunciationButton.textContent = '🗣️ 재생';
+                        
+                        // 스트림 정리
+                        stream.getTracks().forEach(track => track.stop());
+                    };
+
+                    recordedChunks = [];
+                    mediaRecorder.start();
+                    isRecording = true;
+                    recordButton.textContent = '🔴 녹음 중 (중지)';
+                    recordButton.classList.remove('bg-red-500', 'hover:bg-red-600');
+                    recordButton.classList.add('bg-gray-500', 'animate-pulse');
+                    showMessage('🎙️ 독일어 발음을 녹음 중입니다...', false);
+                })
+                .catch(error => {
+                    console.error('Recording Error:', error);
+                    if (error.name === 'NotAllowedError') {
+                        showMessage('⚠️ 마이크 접근이 거부되었습니다. 브라우저 설정에서 권한을 확인해주세요.', true);
+                    } else {
+                        showMessage('⚠️ 녹음 중 오류가 발생했습니다.', true);
+                    }
+                });
+        }
+        
+        function stopRecording() {
+            if (mediaRecorder && mediaRecorder.state !== 'inactive') {
+                mediaRecorder.stop();
+                isRecording = false;
+                recordButton.textContent = '🎤 녹음';
+                recordButton.classList.remove('bg-gray-500', 'animate-pulse');
+                recordButton.classList.add('bg-red-500', 'hover:bg-red-600');
+                showMessage('💾 녹음이 완료되었습니다. 재생 버튼을 눌러 확인하세요.', false);
+            }
+        }
+        
+        // --- 이벤트 리스너 ---
+
+        // 모드 선택 이벤트
+        modeFormalButton.addEventListener('click', () => startQuiz('formal'));
+        modeMixedButton.addEventListener('click', () => startQuiz('mixed'));
+
+        // 퀴즈 진행 이벤트
+        checkButton.addEventListener('click', () => checkAnswer(false)); // 키보드 입력: false
+        nextButton.addEventListener('click', () => {
+            currentQuestionIndex++;
+            updateProgress();
+            loadQuestion();
+        });
+
+        // =================================================================
+        // *** 엔터 키로 정답 확인 및 다음 문제 이동 처리 ***
+        // =================================================================
+        answerInput.addEventListener('keypress', (e) => {
+            if (e.key === 'Enter') {
+                e.preventDefault(); 
+                
+                if (!checkButton.disabled) {
+                    // 1. '확인' 버튼이 활성화된 상태 (정답 입력 전) -> 정답 확인
+                    checkButton.click();
+                } else if (!nextButton.disabled) {
+                    // 2. '다음 문제' 버튼이 활성화된 상태 (정답 확인 후) -> 다음 문제로 이동
+                    nextButton.click();
+                }
+            }
+        });
+
+        // 결과 화면 이벤트
+        restartButton.addEventListener('click', () => startQuiz(currentMode));
+        goToSelectionButton.addEventListener('click', showSelectionScreen);
+        
+        // 음성/발음 연습 이벤트
+        nativeListenButton.addEventListener('click', speakGerman);
+        recordButton.addEventListener('click', startRecording);
+        voiceInputButton.addEventListener('click', toggleVoiceInput);
+        
+        // 초기 로드
+        window.onload = () => {
+             // TTS/STT 지원 여부 확인
+            if (!isSttSupported) {
+                voiceInputButton.disabled = true;
+                voiceInputButton.title = '이 브라우저는 음성 인식을 지원하지 않습니다.';
+                voiceInputButton.classList.add('opacity-50', 'cursor-not-allowed');
+            }
+            if (!('speechSynthesis' in window)) {
+                 nativeListenButton.disabled = true;
+                 nativeListenButton.classList.add('opacity-50', 'cursor-not-allowed');
+            }
+            showSelectionScreen();
+        };
+
+    </script>
+</body>
+</html>
