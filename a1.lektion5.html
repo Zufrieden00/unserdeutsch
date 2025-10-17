@@ -1,0 +1,642 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Lektion 4 통과시험</title>
+    <!-- Tailwind CSS CDN -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Font Awesome for microphone and speaker icon -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <!-- Google Font (Inter) -->
+    <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap">
+    <style>
+        body {
+            font-family: 'Inter', sans-serif;
+        }
+        .answer-container {
+            transition: max-height 0.3s ease-out;
+            overflow: hidden;
+            /* 정답 리스트 증가에 맞춰 높이 조정 */
+            max-height: 0; 
+        }
+        .answer-container.visible {
+            max-height: 250px; 
+        }
+        .microphone-btn {
+            background-color: #ef4444;
+            color: #fff;
+            padding: 1rem;
+            border-radius: 9999px;
+            box-shadow: 0 4px 6px -1-px rgba(0, 0, 0, 0.1), 0 2px 4px -1-rgba(0, 0, 0, 0.06);
+            transition: all 0.3s ease;
+        }
+        .microphone-btn:hover {
+            background-color: #dc2626;
+            transform: scale(1.05);
+        }
+        .microphone-btn.listening {
+            animation: pulse 1.5s infinite;
+        }
+        @keyframes pulse {
+            0% { transform: scale(1); box-shadow: 0 0 0 0 rgba(239, 68, 68, 0.7); }
+            70% { transform: scale(1.05); box-shadow: 0 0 0 10px rgba(239, 68, 68, 0); }
+            100% { transform: scale(1); box-shadow: 0 0 0 0 rgba(239, 68, 68, 0); }
+        }
+        .message-box {
+            position: fixed;
+            top: 20px;
+            left: 50%;
+            transform: translateX(-50%);
+            background-color: #333;
+            color: white;
+            padding: 1rem 2rem;
+            border-radius: 0.75rem;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+            z-index: 1000;
+            opacity: 0;
+            transition: opacity 0.5s ease-in-out;
+        }
+        .message-box.show {
+            opacity: 1;
+        }
+    </style>
+</head>
+<body class="bg-gray-900 text-gray-100 flex items-center justify-center min-h-screen p-4">
+    <div id="message-box" class="message-box"></div>
+
+    <div class="bg-gray-800 p-8 md:p-12 rounded-2xl shadow-xl max-w-2xl w-full">
+        <h1 class="text-3xl md:text-4xl font-bold text-center mb-6 text-yellow-300">Lektion 5 통과시험</h1>
+        <div id="start-screen" class="text-center">
+            <h2 class="text-2xl md:text-3xl font-bold mb-4">퀴즈 유형을 선택하세요.</h2>
+            <p class="text-gray-400 mb-8">
+                선택하신 유형으로만 모든 문제가 출제됩니다.
+            </p>
+            <div class="flex flex-col sm:flex-row justify-center space-y-4 sm:space-y-0 sm:space-x-4">
+                <button id="start-writing-btn" class="bg-blue-600 hover:bg-blue-700 text-white font-bold py-3 px-6 rounded-xl transition-all duration-300 shadow-lg">
+                    📝 작문 퀴즈 시작
+                </button>
+                <button id="start-speaking-btn" class="bg-green-600 hover:bg-green-700 text-white font-bold py-3 px-6 rounded-xl transition-all duration-300 shadow-lg">
+                    🎙️ 말하기 퀴즈 시작
+                </button>
+            </div>
+        </div>
+
+        <p id="quiz-instructions" class="text-center text-gray-400 mb-8 hidden">
+            <!-- Instructions will be updated dynamically -->
+        </p>
+        
+        <div id="quiz-status" class="text-center text-xl font-semibold mb-6 hidden"></div>
+
+        <div id="single-quiz-item" class="bg-gray-700 p-6 rounded-xl shadow-md space-y-4 hidden">
+            <!-- The current quiz question will be rendered here -->
+        </div>
+
+        <div id="quiz-controls" class="mt-8 flex flex-col sm:flex-row justify-center space-y-4 sm:space-y-0 sm:space-x-4 hidden">
+            <!-- Buttons will be rendered dynamically -->
+        </div>
+
+        <div id="final-results" class="mt-8 text-center hidden">
+            <h2 class="text-2xl font-bold mb-4 text-green-400">퀴즈 결과</h2>
+            <p id="final-score" class="text-xl mb-2"></p>
+            <p id="pass-fail-message" class="text-3xl font-bold"></p>
+            <button id="restart-btn" class="mt-4 bg-blue-600 hover:bg-blue-700 text-white font-bold py-3 px-6 rounded-xl transition-all duration-300 shadow-lg">
+                처음으로 돌아가기
+            </button>
+        </div>
+    </div>
+
+    <script>
+        // Web Speech API 지원 여부 확인
+        const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+        let recognition = null;
+        let isRecognizing = false; // 음성 인식 API 사용 상태
+        let isAnswered = false; // 문제를 맞혔는지 여부 상태
+        if (SpeechRecognition) {
+            recognition = new SpeechRecognition();
+            recognition.lang = 'de-DE';
+            recognition.continuous = false;
+            recognition.interimResults = false;
+        }
+        
+        // MediaRecorder를 이용한 사용자 음성 녹음 (연습용)
+        let mediaRecorder = null;
+        let audioChunks = [];
+        let recordedAudioBlob = null;
+        let isPracticeRecording = false; // 연습 녹음 상태
+
+        function showMessageBox(message) {
+            const msgBox = document.getElementById('message-box');
+            msgBox.textContent = message;
+            msgBox.classList.add('show');
+            setTimeout(() => {
+                msgBox.classList.remove('show');
+            }, 3000);
+        }
+
+        function normalizeSpeechText(text) {
+            // 구두점, 공백, 대소문자 제거 후 소문자로 변환 (채점용)
+            // Umlaut(ä, ö, ü)는 그대로 둡니다.
+            return text.toLowerCase().replace(/[^\p{L}\p{N}]/gu, '').replace(/\s/g, '');
+        }
+
+        const quizData = [
+            // 가장 자연스러운 S-V-T-O, T-V-S-O 및 (요일+시각)-V-S-O 어순만 반영
+            { question: "무슨 일이야?", answers: ["Was ist los?"] },
+            { question: "무슨 일이 일어나고 있니?", answers: ["Was passiert?"] },
+            { question: "지금 몇 시야?", answers: ["Wie spät ist es?"] },
+            { question: "지금 오후 3시야.", answers: ["Es ist fünfzehn Uhr.", "Es ist 15 Uhr."] },
+            { question: "오늘 뭐해?", answers: ["Was machst du heute?"] },
+            { question: "오늘 축구 해.", answers: ["Ich spiele heute Fußball.", "Heute spiele ich Fußball."] },
+            { question: "그녀는 저녁밥을 먹어.", answers: ["Sie isst Abendessen."] },
+            { question: "그녀는 저녁에 뭐해?", answers: ["Was macht sie am Abend?"] },
+            { question: "너는 아침에 뭐해?", answers: ["Was machst du am Morgen?"] },
+            { question: "금요일에 마르쿠스는 항상 독일어를 공부합니다.", answers: ["Markus lernt am Freitag immer Deutsch.", "Am Freitag lernt Markus immer Deutsch."] },
+            { question: "월요일에 그는 14시에 미용실에 갑니다.", 
+              answers: ["Er geht am Montag um 14 Uhr zum Friseur.", 
+                        "Am Montag geht er um 14 Uhr zum Friseur.", 
+                        "Am Montag um 14 Uhr geht er zum Friseur."] // 요일+시간 결합
+            },
+            { question: "화요일에 루카스와 미샤엘은 13시에 점심을 먹습니다.", 
+              answers: [
+                        "Lukas und Michael essen am Dienstag um 13 Uhr Mittag.", // S-V-T-O (주어 강조)
+                        "Am Dienstag essen Lukas und Michael um 13 Uhr Mittag.", // T-V-S-O (요일 강조)
+                        "Am Dienstag um 13 Uhr essen Lukas und Michael Mittag.", // TT-V-S-O (요일+시간 강조)
+                        // 13:00 Uhr 버전도 정답으로 유지
+                        "Lukas und Michael essen am Dienstag um 13:00 Uhr Mittag.", 
+                        "Am Dienstag essen Lukas und Michael um 13:00 Uhr Mittag.", 
+                        "Am Dienstag um 13:00 Uhr essen Lukas und Michael Mittag." 
+                      ]
+            },
+            { question: "수요일에 그는 약속이 하나 있습니다.", answers: ["Er hat am Mittwoch einen Termin.", "Am Mittwoch hat er einen Termin."] },
+            { question: "일요일에 그는 13시에 축구를 합니다.", 
+              answers: ["Er spielt am Sonntag um 13 Uhr Fußball.", 
+                        "Am Sonntag spielt er um 13 Uhr Fußball.", 
+                        "Am Sonntag um 13 Uhr spielt er Fußball."] // 요일+시간 결합
+            }, 
+            { question: "토요일 14시에 그가 놀러옵니다.", 
+              answers: [
+                        "Er kommt am Samstag um 14 Uhr zu Besuch.", // S-V-T-O
+                        "Am Samstag um 14 Uhr kommt er zu Besuch.", // TT-V-S-O
+                        "Am Samstag kommt er um 14 Uhr zu Besuch." // T-V-S-O
+                      ] 
+            },
+            { question: "너는 티비를 얼마나 오래 봐?", answers: ["Wie lange siehst du fern?"] },
+            { question: "너는 축구를 얼마나 오래 해?", answers: ["Wie lange spielst du Fußball?"] },
+            { question: "나는 8시부터 10시까지 축구를 해.", answers: ["Ich spiele von 8 bis 10 Uhr Fußball.", "Von 8 bis 10 Uhr spiele ich Fußball."] },
+            { question: "나는 월요일부터 금요일까지 일 해.", answers: ["Ich arbeite von Montag bis Freitag.", "Von Montag bis Freitag arbeite ich."] },
+            { question: "몇 시에?", answers: ["Um wie viel Uhr?"] },
+            { question: "13시 30분에!", answers: ["Um 13:30 Uhr!"] },
+            { question: "얼마나 오랫동안?", answers: ["Wie lange?"] },
+            { question: "13시 30분부터 15시 30분까지!", answers: ["von 13:30 Uhr bis 15:30 Uhr!"] },
+            { question: "너도 올래?", answers: ["Kommst du?"] },
+            { question: "난 목요일 저녁에 시간 돼.", answers: ["Ich habe am Donnerstagabend Zeit.", "Am Donnerstagabend habe ich Zeit."] },
+            { question: "너는 언제 시간 있어?", answers: ["Wann hast du Zeit?"] },
+            { question: "너 시간 있어?", answers: ["Hast du Zeit?"] },
+            { question: "9시에 우리 약속 있어!", 
+              answers: [
+                        "Um neun Uhr haben wir einen Termin!", // T-V-S-O (글자)
+                        "Wir haben um neun Uhr einen Termin!", // S-V-T-O (글자)
+                        "Um 9 Uhr haben wir einen Termin!", // T-V-S-O (숫자)
+                        "Wir haben um 9 Uhr einen Termin!" // S-V-T-O (숫자)
+                      ] 
+            },
+            { question: "16번 버스 언제 출발해?", answers: ["Wann fährt der Bus Nummer 16?"] },
+            { question: "그는(그 기차는) 7시 38분에 출발해.", answers: ["Er fährt um 7:38 Uhr.", "Um 7:38 Uhr fährt er."] },
+            { question: "버스는 이미 떠났어.", answers: ["Der Bus ist weg."] },
+            { question: "버스는 8시 30분보다 10분 늦게 출발합니다.", answers: ["Der Bus fährt um zehn nach halb neun.", "Um zehn nach halb neun fährt der Bus."] },
+            { question: "그는 미용실에 언제 가?", answers: ["Wann geht er zum Friseur?"] },
+            { question: "그는 언제 축구해?", answers: ["Wann spielt er Fußball?"] },
+            { question: "그는 언제 점심을 먹어?", answers: ["Wann isst er Mittag?"] },
+            { question: "그는 언제 커피를 마셔?", answers: ["Wann trinkt er Kaffee?"] },
+            { question: "스페인어 수업을 언제 시작해?", answers: ["Wann beginnt der Spanischkurs?"] },
+            { question: "그 수업은 저녁 6시에 시작합니다.", 
+              answers: [
+                  "Der Kurs beginnt um 18:00 Uhr.", 
+                  "Um 18:00 Uhr beginnt der Kurs.",
+                  "Der Kurs beginnt um 18 Uhr.",
+                  "Um 18 Uhr beginnt der Kurs."
+              ] 
+            },
+            { question: "파블로는 언제 방문하러 와?", answers: ["Wann kommt Pablo zu Besuch?"] },
+            { question: "당신은 언제 여기에 계십니까?", answers: ["Wann sind Sie hier?"] },
+            { question: "당신은 이미 사무실에 계십니까?", answers: ["Sind Sie schon im Büro?"] },
+            { question: "저는 조금 늦게 옵니다.", answers: ["Ich komme ein bisschen später.", "Ein bisschen später komme ich."] },
+            { question: "저는 9시 되기 5분 전에 사무실에 있습니다.", answers: ["Ich bin um fünf vor neun im Büro.", "Ich bin um 8:55 Uhr im Büro.", "Um fünf vor neun bin ich im Büro.", "Um 8:55 Uhr bin ich im Büro."] },
+            { question: "당신은 독일어를 언제 공부하시나요?", answers: ["Wann lernen Sie Deutsch?"] },
+            { question: "저는 저녁에 독일어를 공부합니다.", answers: ["Ich lerne abends Deutsch.", "Ich lerne am Abend Deutsch.", "Abends lerne ich Deutsch.", "Am Abend lerne ich Deutsch."] },
+            { question: "당신은 언제 요리하시나요?", answers: ["Wann kochen Sie?"] }
+        ];
+
+        let shuffledQuizData = [];
+        let currentQuestionIndex = 0;
+        let score = 0;
+        let totalQuestions = 0;
+        let currentQuizType = null;
+
+        const startScreen = document.getElementById('start-screen');
+        const quizStatus = document.getElementById('quiz-status');
+        const singleQuizItem = document.getElementById('single-quiz-item');
+        const quizControls = document.getElementById('quiz-controls');
+        const finalResults = document.getElementById('final-results');
+        const finalScoreElem = document.getElementById('final-score');
+        const passFailMessageElem = document.getElementById('pass-fail-message');
+        const quizInstructions = document.getElementById('quiz-instructions');
+        const restartBtn = document.getElementById('restart-btn');
+
+        function shuffleArray(array) {
+            for (let i = array.length - 1; i > 0; i--) {
+                const j = Math.floor(Math.random() * (i + 1));
+                [array[i], array[j]] = [array[j], array[i]];
+            }
+            return array;
+        }
+
+        function startQuiz(type) {
+            currentQuizType = type;
+            shuffledQuizData = shuffleArray([...quizData]);
+            currentQuestionIndex = 0;
+            score = 0;
+            totalQuestions = quizData.length;
+
+            startScreen.classList.add('hidden');
+            quizStatus.classList.remove('hidden');
+            quizInstructions.classList.remove('hidden');
+            singleQuizItem.classList.remove('hidden');
+            quizControls.classList.remove('hidden');
+            finalResults.classList.add('hidden');
+
+            renderQuestion();
+        }
+
+        // TTS(Text-to-Speech) 기능
+        function speakText(text) {
+            if (!('speechSynthesis' in window)) {
+                showMessageBox('죄송합니다. 이 브라우저에서는 음성 기능을 지원하지 않습니다.');
+                return;
+            }
+            const utterance = new SpeechSynthesisUtterance(text);
+            utterance.lang = 'de-DE';
+            
+            const voiceAvailable = new Promise(resolve => {
+                const voices = window.speechSynthesis.getVoices();
+                if (voices.length > 0) {
+                    resolve(voices);
+                } else {
+                    window.speechSynthesis.onvoiceschanged = () => {
+                        resolve(window.speechSynthesis.getVoices());
+                    };
+                }
+            });
+
+            voiceAvailable.then(voices => {
+                const germanVoice = voices.find(voice => voice.lang === 'de-DE');
+                if (germanVoice) {
+                    utterance.voice = germanVoice;
+                }
+                window.speechSynthesis.speak(utterance);
+            });
+        }
+
+        function renderQuestion() {
+            quizStatus.textContent = `문제 ${currentQuestionIndex + 1} / ${totalQuestions} (맞은 개수: ${score}개)`;
+            isAnswered = false; 
+
+            const currentQuestion = shuffledQuizData[currentQuestionIndex];
+            // 정답 목록 출력 시, 쉼표 대신 줄바꿈을 사용하여 명확하게 표시
+            const correctAnswersHtml = currentQuestion.answers.map(ans => `<span class="block">${ans}</span>`).join('');
+            
+            if (currentQuizType === 'writing') {
+                quizInstructions.textContent = "아래 한국어 문장을 독일어로 바르게 작문해 보세요.";
+                singleQuizItem.innerHTML = `
+                    <p class="text-xl font-medium mb-4">문제. ${currentQuestion.question}</p>
+                    <input type="text" id="user-input" placeholder="여기에 정답을 입력하세요..." class="w-full bg-gray-600 text-white placeholder-gray-400 border border-gray-500 rounded-lg py-2 px-4 focus:outline-none focus:ring-2 focus:ring-blue-500">
+                    <div id="answer-feedback" class="mt-4 hidden text-lg font-bold"></div>
+                    <div id="correct-answer-container" class="answer-container mt-2">
+                        <div class="bg-gray-600 p-3 rounded-lg text-gray-300">
+                            <span class="font-bold block mb-1">정답:</span> 
+                            <div class="flex flex-col space-y-1">
+                                ${correctAnswersHtml}
+                            </div>
+                            <button id="listen-btn" class="mt-2 text-purple-400 hover:text-purple-300 transition-colors duration-200">
+                                <i class="fas fa-volume-up"></i> 첫 번째 정답 발음 듣기
+                            </button>
+                        </div>
+                    </div>
+                    <div id="audio-controls-container" class="mt-2 flex items-center justify-center space-x-4 hidden">
+                        <div class="flex items-center">
+                            <button id="play-my-audio-btn" class="text-green-400 hover:text-green-300 transition-colors duration-200">
+                                <i class="fas fa-play-circle text-2xl"></i>
+                            </button>
+                            <span class="text-sm text-gray-400 ml-2">내 발음 듣기</span>
+                        </div>
+                        <div class="flex items-center">
+                            <button id="practice-record-btn" class="text-purple-400 hover:text-purple-300 transition-colors duration-200">
+                                <i class="fas fa-microphone text-2xl"></i>
+                            </button>
+                            <span class="text-sm text-gray-400 ml-2" id="practice-btn-text">연습 녹음</span>
+                        </div>
+                    </div>
+                `;
+                quizControls.innerHTML = `
+                    <button id="submit-btn" class="bg-yellow-400 text-gray-900 font-semibold py-3 px-6 rounded-xl hover:bg-yellow-500 transition-colors duration-300 shadow-lg">
+                        정답 제출
+                    </button>
+                    <button id="next-question-btn" class="bg-blue-600 hover:bg-blue-700 text-white font-bold py-3 px-6 rounded-xl transition-all duration-300 shadow-lg hidden">
+                        다음 문제
+                    </button>
+                `;
+                document.getElementById('submit-btn').addEventListener('click', () => checkAnswer(document.getElementById('user-input').value));
+                document.getElementById('listen-btn').addEventListener('click', () => speakText(currentQuestion.answers[0].split(',')[0].trim())); 
+                document.getElementById('play-my-audio-btn').addEventListener('click', playMyAudio);
+                document.getElementById('practice-record-btn').addEventListener('click', togglePracticeRecording);
+            } else {
+                quizInstructions.textContent = "아래 한국어 문장을 듣고 독일어로 말해보세요.";
+                singleQuizItem.innerHTML = `
+                    <p class="text-xl font-medium mb-4">문제. ${currentQuestion.question}</p>
+                    <div class="flex items-center justify-center space-x-4">
+                        <button id="record-btn" class="microphone-btn"><i class="fas fa-microphone text-2xl"></i></button>
+                        <p id="speech-text" class="text-lg text-gray-300">마이크 버튼을 누르고 답을 말하세요.</p>
+                    </div>
+                    <div id="answer-feedback" class="mt-4 hidden text-lg font-bold"></div>
+                    <div id="correct-answer-container" class="answer-container mt-2">
+                        <div class="bg-gray-600 p-3 rounded-lg text-gray-300">
+                            <span class="font-bold block mb-1">정답:</span> 
+                            <div class="flex flex-col space-y-1">
+                                ${correctAnswersHtml}
+                            </div>
+                            <button id="listen-btn" class="mt-2 text-purple-400 hover:text-purple-300 transition-colors duration-200">
+                                <i class="fas fa-volume-up"></i> 첫 번째 정답 발음 듣기
+                            </button>
+                        </div>
+                    </div>
+                    <div id="audio-controls-container" class="mt-2 flex items-center justify-center space-x-4 hidden">
+                        <div class="flex items-center">
+                            <button id="play-my-audio-btn" class="text-green-400 hover:text-green-300 transition-colors duration-200">
+                                <i class="fas fa-play-circle text-2xl"></i>
+                            </button>
+                            <span class="text-sm text-gray-400 ml-2">내 발음 듣기</span>
+                        </div>
+                        <div class="flex items-center">
+                            <button id="practice-record-btn" class="text-purple-400 hover:text-purple-300 transition-colors duration-200">
+                                <i class="fas fa-microphone text-2xl"></i>
+                            </button>
+                            <span class="text-sm text-gray-400 ml-2" id="practice-btn-text">연습 녹음</span>
+                        </div>
+                    </div>
+                `;
+                quizControls.innerHTML = `
+                    <button id="next-question-btn" class="bg-blue-600 hover:bg-blue-700 text-white font-bold py-3 px-6 rounded-xl transition-all duration-300 shadow-lg hidden">
+                        다음 문제
+                    </button>
+                `;
+                document.getElementById('record-btn').addEventListener('click', startRecording);
+                document.getElementById('listen-btn').addEventListener('click', () => speakText(currentQuestion.answers[0].split(',')[0].trim())); 
+                document.getElementById('play-my-audio-btn').addEventListener('click', playMyAudio);
+                document.getElementById('practice-record-btn').addEventListener('click', togglePracticeRecording);
+            }
+
+            document.getElementById('next-question-btn').addEventListener('click', nextQuestion);
+            
+            setTimeout(() => {
+                const userInput = document.getElementById('user-input');
+                if (userInput) {
+                    userInput.focus();
+                }
+            }, 0);
+        }
+
+        // 말하기 퀴즈용 음성 인식 시작 (녹음 없이)
+        function startRecording() {
+            if (!recognition) {
+                showMessageBox('죄송합니다. 이 브라우저에서는 음성 인식을 지원하지 않습니다.');
+                return;
+            }
+            if (isRecognizing) {
+                return;
+            }
+
+            isRecognizing = true;
+            const recordBtn = document.getElementById('record-btn');
+            const speechText = document.getElementById('speech-text');
+
+            recordBtn.classList.add('listening');
+            speechText.textContent = '말씀해 주세요...';
+            
+            recordedAudioBlob = null; 
+
+            recognition.onresult = (event) => {
+                const transcript = event.results[0][0].transcript;
+                speechText.textContent = transcript;
+                checkAnswer(transcript);
+            };
+
+            recognition.onerror = (event) => {
+                console.error("Speech Recognition Error:", event.error);
+                recordBtn.classList.remove('listening');
+                speechText.textContent = '음성 인식 오류 또는 마이크 접근 권한 필요. 다시 시도해 주세요.';
+                showMessageBox('음성 인식 오류가 발생했습니다. 마이크 권한을 확인해 주세요.');
+                isRecognizing = false;
+            };
+            
+            recognition.onend = () => {
+                recordBtn.classList.remove('listening');
+                isRecognizing = false;
+            };
+
+            try {
+                recognition.start();
+            } catch(e) {
+                console.error("Speech Recognition Start Error:", e);
+                showMessageBox('음성 인식 시작에 실패했습니다. 마이크 권한을 확인해 주세요.');
+                recordBtn.classList.remove('listening');
+                speechText.textContent = '마이크 버튼을 누르고 답을 말하세요.';
+                isRecognizing = false;
+            }
+        }
+        
+        // 연습 녹음 시작 및 중지 토글 (MediaRecorder만 사용)
+        function togglePracticeRecording() {
+            const practiceBtn = document.getElementById('practice-record-btn');
+            const practiceBtnText = document.getElementById('practice-btn-text');
+
+            if (!isPracticeRecording) {
+                // 녹음 시작
+                isPracticeRecording = true;
+                practiceBtn.classList.add('listening');
+                practiceBtnText.textContent = '녹음 중지';
+
+                audioChunks = [];
+                recordedAudioBlob = null;
+
+                navigator.mediaDevices.getUserMedia({ audio: true })
+                    .then(stream => {
+                        mediaRecorder = new MediaRecorder(stream);
+                        mediaRecorder.ondataavailable = event => {
+                            audioChunks.push(event.data);
+                        };
+                        mediaRecorder.onstop = () => {
+                            recordedAudioBlob = new Blob(audioChunks, { 'type' : 'audio/webm; codecs=opus' });
+                            isPracticeRecording = false; 
+                            practiceBtn.classList.remove('listening');
+                            practiceBtnText.textContent = '연습 녹음';
+                            stream.getTracks().forEach(track => track.stop());
+                        };
+                        mediaRecorder.start();
+                    })
+                    .catch(err => {
+                        showMessageBox('연습 녹음을 위해 마이크 접근 권한이 필요합니다.');
+                        console.error('Error accessing microphone for practice recording:', err);
+                        isPracticeRecording = false;
+                        practiceBtn.classList.remove('listening');
+                        practiceBtnText.textContent = '연습 녹음';
+                    });
+            } else {
+                // 녹음 중지
+                isPracticeRecording = false;
+                if (mediaRecorder && mediaRecorder.state === 'recording') {
+                    mediaRecorder.stop();
+                }
+            }
+        }
+
+        // 녹음된 오디오 재생
+        function playMyAudio() {
+            if (recordedAudioBlob) {
+                const audioUrl = URL.createObjectURL(recordedAudioBlob);
+                const audio = new Audio(audioUrl);
+                audio.play();
+                audio.onended = () => {
+                    URL.revokeObjectURL(audioUrl);
+                };
+            } else {
+                showMessageBox('연습 녹음된 오디오가 없습니다.');
+            }
+        }
+
+        // 정답 확인
+        function checkAnswer(userInputText) {
+            const currentQuestion = shuffledQuizData[currentQuestionIndex];
+            const answerFeedback = document.getElementById('answer-feedback');
+            const correctAnswerContainer = document.getElementById('correct-answer-container');
+            const submitBtn = document.getElementById('submit-btn');
+            const nextBtn = document.getElementById('next-question-btn');
+            const audioControlsContainer = document.getElementById('audio-controls-container');
+
+            
+            correctAnswerContainer.classList.add('visible');
+            if (audioControlsContainer) audioControlsContainer.classList.remove('hidden');
+
+            const normalizedUserInput = normalizeSpeechText(userInputText);
+            const normalizedAnswers = currentQuestion.answers.map(answer => normalizeSpeechText(answer));
+            // 입력된 텍스트가 정답 목록의 정규화된 문자열 중 하나와 일치하는지 확인
+            const isCorrect = normalizedAnswers.some(answer => normalizedUserInput === answer);
+            
+            if (currentQuizType === 'writing') {
+                if (isCorrect) {
+                    answerFeedback.textContent = '🎉 정답입니다!';
+                    answerFeedback.className = 'mt-4 text-lg font-bold text-green-400';
+                    score++;
+                } else {
+                    answerFeedback.textContent = '아쉽지만 오답입니다. 😭';
+                    answerFeedback.className = 'mt-4 text-lg font-bold text-red-400';
+                }
+                document.getElementById('user-input').disabled = true;
+                if (submitBtn) submitBtn.classList.add('hidden');
+            } else {
+                if (!isAnswered) { // 첫 시도만 점수 계산
+                    isAnswered = true;
+                    if (isCorrect) {
+                        answerFeedback.textContent = '🎉 정답입니다!';
+                        answerFeedback.className = 'mt-4 text-lg font-bold text-green-400';
+                        score++;
+                    } else {
+                        answerFeedback.textContent = '아쉽지만 오답입니다. 😭';
+                        answerFeedback.className = 'mt-4 text-lg font-bold text-red-400';
+                    }
+                    // 메인 마이크 버튼 비활성화
+                    document.getElementById('record-btn').disabled = true;
+                }
+            }
+
+            answerFeedback.classList.remove('hidden');
+            nextBtn.classList.remove('hidden');
+            quizStatus.textContent = `문제 ${currentQuestionIndex + 1} / ${totalQuestions} (맞은 개수: ${score}개)`;
+        }
+
+        function nextQuestion() {
+            currentQuestionIndex++;
+            if (currentQuestionIndex < totalQuestions) {
+                renderQuestion();
+            } else {
+                endQuiz();
+            }
+        }
+        
+        function endQuiz() {
+            singleQuizItem.classList.add('hidden');
+            quizInstructions.classList.add('hidden');
+            quizStatus.classList.add('hidden');
+            quizControls.classList.add('hidden');
+            
+            finalResults.classList.remove('hidden');
+            
+            const totalScore = Math.round((score / totalQuestions) * 100);
+            finalScoreElem.textContent = `최종 점수: ${totalScore}점`;
+            
+            if (totalScore >= 80) {
+                passFailMessageElem.textContent = '합격입니다! 축하해요!';
+                passFailMessageElem.className = 'text-3xl font-bold text-green-400';
+            } else {
+                passFailMessageElem.innerHTML = '아쉽지만 불합격입니다.<br>다시 도전해 보세요!';
+                passFailMessageElem.className = 'text-3xl font-bold text-red-400';
+            }
+            
+            document.getElementById('restart-btn').addEventListener('click', resetQuiz);
+        }
+
+        function resetQuiz() {
+            startScreen.classList.remove('hidden');
+            quizStatus.classList.add('hidden');
+            quizInstructions.classList.add('hidden');
+            singleQuizItem.classList.add('hidden');
+            quizControls.classList.add('hidden');
+            finalResults.classList.add('hidden');
+        }
+
+        function initializeQuiz() {
+            document.getElementById('start-writing-btn').addEventListener('click', () => startQuiz('writing'));
+            document.getElementById('start-speaking-btn').addEventListener('click', () => startQuiz('speaking'));
+            restartBtn.addEventListener('click', resetQuiz);
+        }
+        
+        window.onload = function() {
+            // 페이지 로드 시 마이크 권한을 먼저 요청합니다.
+            navigator.mediaDevices.getUserMedia({ audio: true })
+                .then(stream => {
+                    stream.getTracks().forEach(track => track.stop());
+                    initializeQuiz(); 
+                })
+                .catch(err => {
+                    console.error("Microphone access required:", err);
+                    showMessageBox('마이크 권한이 거부되었거나 접근할 수 없습니다. "말하기 퀴즈"를 사용하려면 브라우저 설정에서 권한을 허용해 주세요.');
+                    initializeQuiz(); 
+                });
+
+            document.addEventListener('keydown', (e) => {
+                if (e.key === 'Enter') {
+                    const submitBtn = document.getElementById('submit-btn');
+                    const nextBtn = document.getElementById('next-question-btn');
+                    
+                    if (submitBtn && !submitBtn.classList.contains('hidden')) {
+                        checkAnswer(document.getElementById('user-input').value);
+                    } 
+                    else if (nextBtn && !nextBtn.classList.contains('hidden')) {
+                        nextQuestion();
+                    }
+                }
+            });
+        };
+    </script>
+</body>
+</html>
