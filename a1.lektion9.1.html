@@ -1,0 +1,456 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Lektion 9.1 통과시험</title>
+    <!-- Tailwind CSS CDN -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Font Awesome for microphone and speaker icon -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <!-- Google Font (Inter) -->
+    <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap">
+    <style>
+        body {
+            font-family: 'Inter', sans-serif;
+        }
+        .answer-container {
+            transition: max-height 0.3s ease-out;
+            overflow: hidden;
+            max-height: 0; 
+        }
+        .answer-container.visible {
+            max-height: 500px;
+        }
+        .microphone-btn {
+            background-color: #ef4444;
+            color: #fff;
+            padding: 1rem;
+            border-radius: 9999px;
+            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+            transition: all 0.3s ease;
+        }
+        .microphone-btn:hover {
+            background-color: #dc2626;
+            transform: scale(1.05);
+        }
+        .microphone-btn.listening {
+            animation: pulse 1.5s infinite;
+        }
+        @keyframes pulse {
+            0% { transform: scale(1); box-shadow: 0 0 0 0 rgba(239, 68, 68, 0.7); }
+            70% { transform: scale(1.05); box-shadow: 0 0 0 10px rgba(239, 68, 68, 0); }
+            100% { transform: scale(1); box-shadow: 0 0 0 0 rgba(239, 68, 68, 0); }
+        }
+        .message-box {
+            position: fixed;
+            top: 20px;
+            left: 50%;
+            transform: translateX(-50%);
+            background-color: #333;
+            color: white;
+            padding: 1rem 2rem;
+            border-radius: 0.75rem;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+            z-index: 1000;
+            opacity: 0;
+            transition: opacity 0.5s ease-in-out;
+            pointer-events: none;
+        }
+        .message-box.show {
+            opacity: 1;
+        }
+    </style>
+</head>
+<body class="bg-gray-900 text-gray-100 flex items-center justify-center min-h-screen p-4">
+    <div id="message-box" class="message-box"></div>
+
+    <div class="bg-gray-800 p-8 md:p-12 rounded-2xl shadow-xl max-w-2xl w-full">
+        <h1 class="text-3xl md:text-4xl font-bold text-center mb-6 text-yellow-300">Lektion 9.1 통과시험</h1>
+        
+        <div id="start-screen" class="text-center">
+            <h2 class="text-2xl md:text-3xl font-bold mb-4">퀴즈 유형을 선택하세요.</h2>
+            <p class="text-gray-400 mb-8">
+                선택하신 유형으로만 모든 문제가 출제됩니다.
+            </p>
+            <div class="flex flex-col sm:flex-row justify-center space-y-4 sm:space-y-0 sm:space-x-4">
+                <button id="start-writing-btn" class="bg-blue-600 hover:bg-blue-700 text-white font-bold py-3 px-6 rounded-xl transition-all duration-300 shadow-lg">
+                    📝 작문 퀴즈 시작
+                </button>
+                <button id="start-speaking-btn" class="bg-green-600 hover:bg-green-700 text-white font-bold py-3 px-6 rounded-xl transition-all duration-300 shadow-lg">
+                    🎙️ 말하기 퀴즈 시작
+                </button>
+            </div>
+        </div>
+
+        <p id="quiz-instructions" class="text-center text-gray-400 mb-8 hidden"></p>
+        <div id="quiz-status" class="text-center text-xl font-semibold mb-6 hidden"></div>
+
+        <div id="single-quiz-item" class="bg-gray-700 p-6 rounded-xl shadow-md space-y-4 hidden"></div>
+
+        <div id="quiz-controls" class="mt-8 flex flex-col sm:flex-row justify-center space-y-4 sm:space-y-0 sm:space-x-4 hidden"></div>
+
+        <div id="final-results" class="mt-8 text-center hidden">
+            <h2 class="text-2xl font-bold mb-4 text-green-400">퀴즈 결과</h2>
+            <p id="final-score" class="text-xl mb-2"></p>
+            <p id="pass-fail-message" class="text-3xl font-bold"></p>
+            <button id="restart-btn" class="mt-4 bg-blue-600 hover:bg-blue-700 text-white font-bold py-3 px-6 rounded-xl transition-all duration-300 shadow-lg">
+                처음으로 돌아가기
+            </button>
+        </div>
+    </div>
+
+    <script>
+        const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+        let recognition = null;
+        let isRecognizing = false;
+        let isAnswered = false;
+        if (SpeechRecognition) {
+            recognition = new SpeechRecognition();
+            recognition.lang = 'de-DE';
+            recognition.continuous = false;
+            recognition.interimResults = false;
+        }
+        
+        let mediaRecorder = null;
+        let audioChunks = [];
+        let recordedAudioBlob = null;
+        let isPracticeRecording = false;
+
+        function showMessageBox(message) {
+            const msgBox = document.getElementById('message-box');
+            msgBox.textContent = message;
+            msgBox.classList.add('show');
+            setTimeout(() => {
+                msgBox.classList.remove('show');
+            }, 3000);
+        }
+
+        function normalizeForComparison(text) {
+            let t = text.trim().replace(/[.!?,;:]/g, "");
+            t = ` ${t} `.replace(/\sgerne\s/g, ' gern ').trim();
+            t = t.replace(/\b1\b/g, 'eins')
+                 .replace(/\b2\b/g, 'zwei')
+                 .replace(/\b3\b/g, 'drei')
+                 .replace(/\b4\b/g, 'vier');
+            t = t.replace(/ß/g, 'ss');
+            return t;
+        }
+
+        const quizData = [
+            { question: "주말에는 항상 신문을 읽어요.", answers: ["Am Wochenende lese ich immer die Zeitung."] },
+            { question: "우리는 영화관에 자주 가요.", answers: ["Wir gehen oft ins Kino."] },
+            { question: "가끔 친구들을 만나요.", answers: ["Manchmal treffe ich Freunde."] },
+            { question: "자전거는 아주 가끔 타요.", answers: ["Ich fahre sehr selten Fahrrad."] },
+            { question: "저는 조깅을 전혀 안 해요.", answers: ["Ich jogge nie."] },
+            { question: "날씨가 좋네요.", answers: ["Das Wetter ist gut."] },
+            { question: "비가 더 이상 안 와요.", answers: ["Es regnet nicht mehr."] },
+            { question: "우리 집에 놀러 오니?", answers: ["Besuchst du uns?"] },
+            { question: "우리가 너를 초대할게 (네 것까지 낼게).", answers: ["Wir laden dich ein."] },
+            { question: "그를 만나서 알아가고 싶어.", answers: ["Ich möchte ihn kennenlernen."] },
+            { question: "그녀는 항상 나한테 물어봐.", answers: ["Sie fragt mich immer."] },
+            { question: "해가 쨍쨍해요 (맑아요).", answers: ["Die Sonne scheint."] },
+            { question: "나 기꺼이 갈 거야.", answers: ["Ich komme gerne.", "Ich komme gern."] },
+            { question: "너를 초대하고 싶어.", answers: ["Ich möchte dich einladen."] },
+            { question: "우리 수영할까?", answers: ["Wollen wir schwimmen?"] },
+            { question: "우리 밥 먹으러 갈까?", answers: ["Wollen wir essen gehen?"] },
+            { question: "우리 영화 한 편 볼래?", answers: ["Wollen wir einen Film sehen?"] },
+            { question: "우리 음악 들을까?", answers: ["Wollen wir Musik hören?"] },
+            { question: "자전거 투어 할래?", answers: ["Wollen wir eine Fahrradtour machen?"] },
+            { question: "우리 조깅할까?", answers: ["Wollen wir joggen?"] },
+            { question: "아니, 그때는 시간이 없어.", answers: ["Nein, da habe ich keine Zeit."] },
+            { question: "월요일에는 아쉽게도 안 돼.", answers: ["Am Montag kann ich leider nicht."] },
+            { question: "토요일 오후 1시에 시간 돼?", answers: ["Hast du am Samstag um 13 Uhr Zeit?"] },
+            { question: "그때는 안 되는데, 우리 일요일에는 만날 수 있어.", answers: ["Da geht es nicht, aber wir können uns am Sonntag treffen."] },
+            { question: "그건 별로 재미없을 것 같아.", answers: ["Das finde ich nicht so interessant."] },
+            { question: "당연하지! / 물론이지!", answers: ["Natürlich!"] },
+            { question: "그거 좋은 생각이야!", answers: ["Das ist eine gute Idee!"] },
+            { question: "일요일 저녁 7시 좋아!", answers: ["Sonntag 19 Uhr ist super!"] }
+        ];
+
+        let shuffledQuizData = [];
+        let currentQuestionIndex = 0;
+        let score = 0;
+        let totalQuestions = quizData.length;
+        let currentQuizType = null;
+
+        const startScreen = document.getElementById('start-screen');
+        const quizStatus = document.getElementById('quiz-status');
+        const singleQuizItem = document.getElementById('single-quiz-item');
+        const quizControls = document.getElementById('quiz-controls');
+        const finalResults = document.getElementById('final-results');
+        const finalScoreElem = document.getElementById('final-score');
+        const passFailMessageElem = document.getElementById('pass-fail-message');
+        const quizInstructions = document.getElementById('quiz-instructions');
+        const restartBtn = document.getElementById('restart-btn');
+
+        function shuffleArray(array) {
+            for (let i = array.length - 1; i > 0; i--) {
+                const j = Math.floor(Math.random() * (i + 1));
+                [array[i], array[j]] = [array[j], array[i]];
+            }
+            return array;
+        }
+
+        function startQuiz(type) {
+            currentQuizType = type;
+            shuffledQuizData = shuffleArray([...quizData]);
+            currentQuestionIndex = 0;
+            score = 0;
+            totalQuestions = shuffledQuizData.length;
+            startScreen.classList.add('hidden');
+            quizStatus.classList.remove('hidden');
+            quizInstructions.classList.remove('hidden');
+            singleQuizItem.classList.remove('hidden');
+            quizControls.classList.remove('hidden');
+            finalResults.classList.add('hidden');
+            renderQuestion();
+        }
+
+        function speakText(text) {
+            if (!('speechSynthesis' in window)) {
+                showMessageBox('음성 기능을 지원하지 않습니다.');
+                return;
+            }
+            window.speechSynthesis.cancel(); 
+            const utterance = new SpeechSynthesisUtterance(text);
+            utterance.lang = 'de-DE';
+            const voices = window.speechSynthesis.getVoices();
+            const germanVoice = voices.find(voice => voice.lang.includes('de'));
+            if (germanVoice) utterance.voice = germanVoice;
+            window.speechSynthesis.speak(utterance);
+        }
+
+        function renderQuestion() {
+            quizStatus.textContent = `문제 ${currentQuestionIndex + 1} / ${totalQuestions} (맞은 개수: ${score}개)`;
+            isAnswered = false; 
+            const currentQuestion = shuffledQuizData[currentQuestionIndex];
+            const correctAnswersHtml = currentQuestion.answers.map(ans => `<span class="block">${ans}</span>`).join('');
+            const questionHtml = `
+                <div class="space-y-1 mb-4">
+                    <p class="text-xl font-medium text-yellow-200">${currentQuestion.question}</p>
+                </div>
+            `;
+            if (currentQuizType === 'writing') {
+                quizInstructions.textContent = "아래 문장을 독일어로 바르게 작문해 보세요.";
+                singleQuizItem.innerHTML = `
+                    ${questionHtml}
+                    <input type="text" id="user-input" autocomplete="off" placeholder="정답 입력..." class="w-full bg-gray-600 text-white placeholder-gray-400 border border-gray-500 rounded-lg py-2 px-4 focus:outline-none focus:ring-2 focus:ring-blue-500">
+                    <div id="answer-feedback" class="mt-4 hidden text-lg font-bold"></div>
+                    <div id="correct-answer-container" class="answer-container mt-2">
+                        <div class="bg-gray-600 p-3 rounded-lg text-gray-300">
+                            <span class="font-bold block mb-1">정답:</span> 
+                            <div class="flex flex-col space-y-1">${correctAnswersHtml}</div>
+                            <button id="listen-btn" class="mt-2 text-purple-400 hover:text-purple-300 transition-colors duration-200">
+                                <i class="fas fa-volume-up"></i> 발음 듣기
+                            </button>
+                        </div>
+                    </div>
+                    <div id="audio-controls-container" class="mt-2 flex items-center justify-center space-x-4 hidden">
+                         <button id="play-my-audio-btn" class="text-green-400 hover:text-green-300 flex items-center">
+                            <i class="fas fa-play-circle text-2xl mr-2"></i> 내 발음
+                         </button>
+                         <button id="practice-record-btn" class="text-purple-400 hover:text-purple-300 flex items-center">
+                            <i class="fas fa-microphone text-2xl mr-2"></i> <span id="practice-btn-text">연습 녹음</span>
+                         </button>
+                    </div>
+                `;
+                quizControls.innerHTML = `
+                    <button id="submit-btn" class="bg-yellow-400 text-gray-900 font-semibold py-3 px-6 rounded-xl hover:bg-yellow-500 transition-colors shadow-lg">정답 제출</button>
+                    <button id="next-question-btn" class="bg-blue-600 hover:bg-blue-700 text-white font-bold py-3 px-6 rounded-xl transition-all shadow-lg hidden">다음 문제</button>
+                `;
+                document.getElementById('submit-btn').addEventListener('click', () => checkAnswer(document.getElementById('user-input').value));
+                document.getElementById('listen-btn').addEventListener('click', () => speakText(currentQuestion.answers[0]));
+                document.getElementById('play-my-audio-btn').addEventListener('click', playMyAudio);
+                document.getElementById('practice-record-btn').addEventListener('click', togglePracticeRecording);
+            } else {
+                quizInstructions.textContent = "뜻을 보고 독일어로 말해보세요.";
+                singleQuizItem.innerHTML = `
+                    ${questionHtml}
+                    <div class="flex flex-col items-center justify-center space-y-4">
+                        <button id="record-btn" class="microphone-btn"><i class="fas fa-microphone text-3xl"></i></button>
+                        <p id="speech-text" class="text-lg text-gray-300">마이크를 누르고 답을 말하세요.</p>
+                    </div>
+                    <div id="answer-feedback" class="mt-4 hidden text-lg font-bold"></div>
+                    <div id="correct-answer-container" class="answer-container mt-2">
+                        <div class="bg-gray-600 p-3 rounded-lg text-gray-300">
+                            <span class="font-bold block mb-1">정답:</span> 
+                            <div class="flex flex-col space-y-1">${correctAnswersHtml}</div>
+                            <button id="listen-btn" class="mt-2 text-purple-400 hover:text-purple-300 transition-colors duration-200">
+                                <i class="fas fa-volume-up"></i> 정답 발음 듣기
+                            </button>
+                        </div>
+                    </div>
+                    <div id="audio-controls-container" class="mt-2 flex items-center justify-center space-x-4 hidden">
+                         <button id="play-my-audio-btn" class="text-green-400 hover:text-green-300 flex items-center">
+                            <i class="fas fa-play-circle text-2xl mr-2"></i> 내 발음
+                         </button>
+                         <button id="practice-record-btn" class="text-purple-400 hover:text-purple-300 flex items-center">
+                            <i class="fas fa-microphone text-2xl mr-2"></i> <span id="practice-btn-text">연습 녹음</span>
+                         </button>
+                    </div>
+                `;
+                quizControls.innerHTML = `
+                    <button id="next-question-btn" class="bg-blue-600 hover:bg-blue-700 text-white font-bold py-3 px-6 rounded-xl transition-all shadow-lg hidden">다음 문제</button>
+                `;
+                document.getElementById('record-btn').addEventListener('click', startRecording);
+                document.getElementById('listen-btn').addEventListener('click', () => speakText(currentQuestion.answers[0]));
+                document.getElementById('play-my-audio-btn').addEventListener('click', playMyAudio);
+                document.getElementById('practice-record-btn').addEventListener('click', togglePracticeRecording);
+            }
+            document.getElementById('next-question-btn').addEventListener('click', nextQuestion);
+            if (currentQuizType === 'writing') {
+                setTimeout(() => document.getElementById('user-input').focus(), 50);
+            }
+        }
+
+        function startRecording() {
+            if (!recognition) {
+                showMessageBox('음성 인식을 지원하지 않습니다.');
+                return;
+            }
+            if (isRecognizing) return;
+            isRecognizing = true;
+            const recordBtn = document.getElementById('record-btn');
+            const speechText = document.getElementById('speech-text');
+            recordBtn.classList.add('listening');
+            speechText.textContent = '말씀해 주세요...';
+            recognition.onresult = (event) => {
+                const transcript = event.results[0][0].transcript;
+                speechText.textContent = `인식: "${transcript}"`;
+                checkAnswer(transcript);
+            };
+            recognition.onerror = () => {
+                recordBtn.classList.remove('listening');
+                speechText.textContent = '다시 시도해 주세요.';
+                isRecognizing = false;
+            };
+            recognition.onend = () => {
+                recordBtn.classList.remove('listening');
+                isRecognizing = false;
+            };
+            recognition.start();
+        }
+
+        function togglePracticeRecording() {
+            const practiceBtn = document.getElementById('practice-record-btn');
+            const practiceBtnText = document.getElementById('practice-btn-text');
+            if (!isPracticeRecording) {
+                isPracticeRecording = true;
+                practiceBtn.classList.add('text-red-500');
+                practiceBtnText.textContent = '중지';
+                audioChunks = [];
+                navigator.mediaDevices.getUserMedia({ audio: true }).then(stream => {
+                    mediaRecorder = new MediaRecorder(stream);
+                    mediaRecorder.ondataavailable = e => audioChunks.push(e.data);
+                    mediaRecorder.onstop = () => {
+                        recordedAudioBlob = new Blob(audioChunks, { 'type' : 'audio/webm' });
+                        isPracticeRecording = false;
+                        practiceBtn.classList.remove('text-red-500');
+                        practiceBtnText.textContent = '연습 녹음';
+                        stream.getTracks().forEach(t => t.stop());
+                    };
+                    mediaRecorder.start();
+                }).catch(() => {
+                    showMessageBox('마이크 권한이 필요합니다.');
+                    isPracticeRecording = false;
+                });
+            } else {
+                if (mediaRecorder) mediaRecorder.stop();
+            }
+        }
+
+        function playMyAudio() {
+            if (recordedAudioBlob) {
+                const url = URL.createObjectURL(recordedAudioBlob);
+                new Audio(url).play();
+            } else {
+                showMessageBox('먼저 녹음을 해주세요.');
+            }
+        }
+
+        function checkAnswer(userInputText) {
+            const currentQuestion = shuffledQuizData[currentQuestionIndex];
+            const feedback = document.getElementById('answer-feedback');
+            const answerContainer = document.getElementById('correct-answer-container');
+            const nextBtn = document.getElementById('next-question-btn');
+            const audioControls = document.getElementById('audio-controls-container');
+            answerContainer.classList.add('visible');
+            if (audioControls) audioControls.classList.remove('hidden');
+            let isCorrect = false;
+            
+            const userVal = normalizeForComparison(userInputText).toLowerCase();
+            isCorrect = currentQuestion.answers.some(ans => normalizeForComparison(ans).toLowerCase() === userVal);
+            
+            if (!isAnswered) {
+                isAnswered = true;
+                if (isCorrect) {
+                    feedback.textContent = '🎉 정답입니다!';
+                    feedback.className = 'mt-4 text-lg font-bold text-green-400';
+                    score++;
+                } else {
+                    feedback.textContent = '😭 오답입니다.';
+                    feedback.className = 'mt-4 text-lg font-bold text-red-400';
+                }
+                if (currentQuizType === 'writing') {
+                    document.getElementById('user-input').disabled = true;
+                    document.getElementById('submit-btn').classList.add('hidden');
+                } else {
+                    document.getElementById('record-btn').disabled = true;
+                }
+            }
+            feedback.classList.remove('hidden');
+            nextBtn.classList.remove('hidden');
+            quizStatus.textContent = `문제 ${currentQuestionIndex + 1} / ${totalQuestions} (맞은 개수: ${score}개)`;
+        }
+
+        function nextQuestion() {
+            currentQuestionIndex++;
+            if (currentQuestionIndex < totalQuestions) {
+                renderQuestion();
+            } else {
+                endQuiz();
+            }
+        }
+
+        function endQuiz() {
+            singleQuizItem.classList.add('hidden');
+            quizInstructions.classList.add('hidden');
+            quizStatus.classList.add('hidden');
+            quizControls.classList.add('hidden');
+            finalResults.classList.remove('hidden');
+            const totalScore = Math.round((score / totalQuestions) * 100);
+            finalScoreElem.textContent = `최종 결과: ${score} / ${totalQuestions} (${totalScore}점)`;
+            if (totalScore >= 80) {
+                passFailMessageElem.textContent = '🎉 합격입니다!';
+                passFailMessageElem.className = 'text-3xl font-bold text-green-400';
+            } else {
+                passFailMessageElem.innerHTML = '불합격입니다. 😭';
+                passFailMessageElem.className = 'text-3xl font-bold text-red-400';
+            }
+        }
+
+        function resetQuiz() {
+            startScreen.classList.remove('hidden');
+            finalResults.classList.add('hidden');
+        }
+
+        window.onload = function() {
+            document.getElementById('start-writing-btn').addEventListener('click', () => startQuiz('writing'));
+            document.getElementById('start-speaking-btn').addEventListener('click', () => startQuiz('speaking'));
+            restartBtn.addEventListener('click', resetQuiz);
+            document.addEventListener('keydown', (e) => {
+                if (e.key === 'Enter') {
+                    const nextBtn = document.getElementById('next-question-btn');
+                    const submitBtn = document.getElementById('submit-btn');
+                    if (submitBtn && !submitBtn.classList.contains('hidden')) {
+                        checkAnswer(document.getElementById('user-input').value);
+                    } else if (nextBtn && !nextBtn.classList.contains('hidden')) {
+                        nextQuestion();
+                    }
+                }
+            });
+        };
+    </script>
+</body>
+</html>
