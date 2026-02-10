@@ -65,7 +65,7 @@
         const quizData = [
             { question: "우리는 어제 공원에서 운동했어요.", literal: "우리는 어제 공원에서 스포츠를 했다.", answers: ["Wir haben gestern im Park Sport gemacht."] },
             { question: "거기서 그들은 음악을 듣고 춤을 췄어요.", literal: "거기서 그들은 음악을 들었고 춤을 췄다.", answers: ["Dort haben sie Musik gehört und getanzt."] },
-            { question: "우리도 춤을 췄어요.", literal: "우리도 역시 춤췄다.", answers: ["Wir haben auch getanzt."] },
+            { question: "우리도 춤을 췄어요.", literal: "우리도 역시 춤췄다.", answers: ["Wir have auch getanzt."] },
             { question: "그저께 우리는 그릴을 했어요.", literal: "그저께 우리는 그릴을 했다.", answers: ["Vorgestern haben wir gegrillt."] },
             { question: "개가 우리 소시지를 먹어버렸어요.", literal: "그 개가 우리의 소시지를 먹었다.", answers: ["Der Hund hat unsere Wurst gefressen."] },
             { question: "그는 어제 저녁에 레나와 술을 마셨어요.", literal: "그는 어제 저녁에 레나와 함께 알코올을 마셨다.", answers: ["Er hat gestern Abend mit Lena Alkohol getrunken."] },
@@ -94,6 +94,9 @@
             { question: "우리 엄마가 빨래를 하셨어요.", literal: "나의 엄마는 빨래를 씻었다.", answers: ["Meine Mama hat Wäsche gewaschen."] },
             { question: "어제 독일어 수업을 들었어요.", literal: "어제 나는 하나의 독일어 코스를 했다.", answers: ["Gestern habe ich einen Deutschkurs gemacht."] }
         ];
+
+        // 중복 제거 및 데이터 정제
+        const uniqueQuizData = quizData.filter((v,i,a)=>a.findIndex(t=>(t.question === v.question))===i);
 
         const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
         let recognition = null, isRecognizing = false, isAnswered = false;
@@ -126,7 +129,8 @@
         }
 
         function startQuiz(type) {
-            currentQuizType = type; shuffledQuizData = shuffleArray([...quizData]);
+            currentQuizType = type; 
+            shuffledQuizData = shuffleArray([...uniqueQuizData]);
             currentQuestionIndex = 0; score = 0;
             startScreen.classList.add('hidden'); quizStatus.classList.remove('hidden');
             quizInstructions.classList.remove('hidden'); singleQuizItem.classList.remove('hidden');
@@ -175,7 +179,21 @@
                     <button id="submit-btn" onclick="checkAnswer(document.getElementById('user-input').value)" class="bg-yellow-400 text-gray-900 font-bold py-3 px-8 rounded-xl hover:bg-yellow-500 transition-colors">정답 제출</button>
                     <button id="next-btn" onclick="nextQuestion()" class="bg-blue-600 text-white font-bold py-3 px-8 rounded-xl hidden hover:bg-blue-700 transition-colors">다음 문제</button>
                 `;
-                setTimeout(() => document.getElementById('user-input').focus(), 50);
+                
+                const inputField = document.getElementById('user-input');
+                setTimeout(() => inputField.focus(), 50);
+
+                // Enter 키 통합 이벤트 관리
+                inputField.addEventListener('keydown', (e) => {
+                    if (e.key === 'Enter') {
+                        if (!isAnswered) {
+                            checkAnswer(inputField.value);
+                        } else {
+                            nextQuestion();
+                        }
+                    }
+                });
+
             } else {
                 quizInstructions.textContent = "뜻을 보고 독일어로 말해보세요.";
                 singleQuizItem.innerHTML = `
@@ -249,7 +267,8 @@
                 feedback.textContent = '😭 오답입니다.'; feedback.className = 'mt-4 text-lg font-bold text-red-400';
             }
             if (currentQuizType === 'writing') {
-                document.getElementById('user-input').disabled = true;
+                document.getElementById('user-input').disabled = false;
+                document.getElementById('user-input').readOnly = true;
                 document.getElementById('submit-btn').classList.add('hidden');
             } else {
                 document.getElementById('record-btn').disabled = true;
